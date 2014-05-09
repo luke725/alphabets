@@ -27,6 +27,11 @@ module RelationalStructure where
 	sigFromList = Map.fromList
 	
 	
+	sigFromRels :: (Ord rname) => [Relation rname element] -> Signature rname
+	sigFromRels rels =
+		Map.fromList (map (\(rname, ar, _) -> (rname, ar)) rels)
+	
+	
 	arity :: Tuple element -> Arity
 	arity = length
 
@@ -186,6 +191,34 @@ module RelationalStructure where
 			preservesRelations = all preservesRelation (relationNames sig1)
 			
 			
+	addToRelation 
+		:: (Ord element, Ord rname) 
+		=> rname
+		-> Arity
+		-> [Tuple element]
+		-> Structure rname element
+		-> Structure rname element
+		
+	addToRelation rname ar tuples (sig, elts, rels) =
+		(sig, elts, rels')
+		where
+			rels' = 
+				Map.insertWith 
+					(\(rname, ar, ts1) (_, _, ts2) -> (rname, ar, Set.union ts1 ts2)) 
+					rname 
+					(rname, ar, Set.fromList tuples) 
+					rels
+	
+	elementsFromRels :: (Ord element) => [Relation rname element] -> Set element
+	elementsFromRels rels =
+		Set.unions $ map
+			(\(_, _, ts) -> Set.unions $ map Set.fromList $ Set.toList ts)
+			rels
+	
+	resetElements :: (Ord element, Ord rname) => Structure rname element -> Structure rname element
+	resetElements (sig, _, rels) = 
+		(sig, elementsFromRels (Map.elems rels), rels)
+	
 	substructure 
 		:: (Ord element) 
 		=> Structure rname element 

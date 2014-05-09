@@ -89,6 +89,7 @@ module Letter where
 				where
 					pp = map (\a -> a .^ f) p
 
+
 	letterRelations :: Letter -> Map [[Atom]] (Set (Tuple (Int, Permutation Int)))
 	letterRelations letter =
 		removeDup
