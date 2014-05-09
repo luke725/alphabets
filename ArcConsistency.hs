@@ -89,7 +89,10 @@ module ArcConsistency where
 					zipTuples = map (\t2 -> zip t1 t2) (Set.toList tuples2)
 			
 					possiblePartSol :: [Tuple (a, b)]
-					possiblePartSol = filter (all (\(a, b) -> Set.member b (sol!a))) zipTuples
+					possiblePartSol = 
+						filter 
+							(all (\(a, b) -> Set.member b (sol!a))) 
+							zipTuples
 			
 					newPosSol =
 						foldl 
@@ -116,16 +119,22 @@ module ArcConsistency where
 		-> PossibleSolutions a b
 		
 	runSAC s1 s2 sol =
-		if sol' == sol
+		if sol'' == sol
 		then sol
-		else runSAC s1 s2 sol'
+		else runSAC s1 s2 sol''
 		where
-			sol' = 
+			sol' = runArcConsistency s1 s2 sol
+			sol'' = 
 				Map.mapWithKey 
-					(\a -> Set.filter 
-						(\b -> notEmpty (runArcConsistency s1 s2 (Map.insert a (Set.singleton b) sol)))
+					(\a sa ->
+						if Set.size sa <= 1
+						then sa
+						else
+							Set.filter (\b -> 
+								notEmpty (runArcConsistency s1 s2 (Map.insert a (Set.singleton b) sol)))
+								sa
 					) 
-					sol
+					sol'
 		
 				
 	findSACSolution
@@ -135,27 +144,29 @@ module ArcConsistency where
 			-> Maybe (Map a b)
 			
 	findSACSolution s1 s2 =
-		case sacIt s1 s2 (fullPossibleSolutions s1 s2) (Set.toList (elements s1)) of
-			Just sol -> Just (Map.map Set.findMin sol)
-			Nothing  -> Nothing
+		if notEmpty initSol
+		then
+			case foldl 
+					(\msol a -> msol >>= (\sol -> setSolOnElem sol a)) 
+					(Just initSol) 
+					(Set.toList (elements s1)) 
+			of
+				Just sol -> Just (Map.map Set.findMin sol)
+				Nothing  -> Nothing
+		else
+			Nothing
 		where
-			sacIt 
-				:: Structure rname a 
-				-> Structure rname b 
-				-> PossibleSolutions a b 
-				-> [a] 
-				-> Maybe (PossibleSolutions a b)
-				
-			sacIt _ _ sol [] = Just sol
-			sacIt s1 s2 sol (h:t) =
-				if notEmpty sol'
-				then
-					sacIt s1 s2 sol'' t	
-				else
-					Nothing
-				where
-					sol' = runSAC s1 s2 sol
-					sol'' = Map.insert h (Set.singleton (Set.findMin (sol'!h))) sol'
+			initSol = runSAC s1 s2 (fullPossibleSolutions s1 s2)
+			
+			setSolOnElem :: PossibleSolutions a b -> a -> Maybe (PossibleSolutions a b)
+			setSolOnElem sol h =
+						if Set.size (sol!h) == 1
+						then Just sol
+						else
+							List.find (const True)
+							$ filter notEmpty
+							$ map (\ha -> runSAC s1 s2 (Map.insert h (Set.singleton ha) sol))
+							$ Set.toList (sol!h)
 				
 					
 	detectMajority 
