@@ -17,49 +17,78 @@ module AlphabetCSP where
 	import Letter
 	import ArcConsistency
 	
-	type Element = (Int, Permutation Int)
+	type Element = (Arity, Permutation Int)
 
 	type RName = Either [[Atom]] Element
 
 	type AStructure a = Structure RName a
 
-	one :: Int -> Element
+	one :: Arity -> Element
 	one r = (r, PG.p [])
 	
+	eltArity :: Element -> Int
+	eltArity (ar, _) = ar
+	
+	eltArities :: Relation RName Element -> Set Arity
+	eltArities (_, _, ts) = 
+		if Set.null ts
+		then Set.empty
+		else
+			Set.fromList (map eltArity (Set.findMin ts))
+	
+	
 
-	buildCSP :: Letter -> (AStructure (Tuple Element), AStructure Element)
-	buildCSP letter =
-		(tstr, str)
+	checkMajority :: Letter -> Bool
+	checkMajority letter =
+		checkAlphMajority rels' && checkAlphMajority rels''
 		where
-			rels' :: [Relation RName Element]
-			rels' = 
+			maxAr = Set.size (atoms letter)
+			rels = 
 				map 
 					(\(as, s) -> (Left as, List.length as, s)) 
 					(Map.toList (letterRelations letter))
-				
-			elts :: Set Element
-			elts = elementsFromRels rels'
+			rels' =
+				filter 
+					(\r -> 
+						Set.null 
+							(Set.intersection 
+								(Set.fromList [maxAr, maxAr - 1, maxAr - 2]) 
+								(eltArities r))
+					) 
+					rels
 			
-			rels :: [Relation RName Element]
-			rels = rels' ++ map (\e -> (Right e, 1, Set.singleton [e])) (Set.toList elts)
+			rels'' =
+				filter
+					(\r ->
+						not $ Set.null
+							(Set.intersection
+								(Set.fromList [maxAr - 2, 1, 2])
+								(eltArities r))
+					)
+					rels
+
+	checkAlphMajority :: [Relation RName Element] -> Bool
+	checkAlphMajority rels =
+		findSACSolution tstr str /= Nothing
+		where
+			elts = elementsFromRels rels
 			
-			sig :: Signature RName
-			sig = sigFromRels rels
+			rels' = rels ++ map (\e -> (Right e, 1, Set.singleton [e])) (Set.toList elts)
 			
 			str :: Structure RName Element
-			str = createStructure sig elts rels
+			str = createStructure (sigFromRels rels') elts rels'
 			
 			tstr :: Structure RName (Tuple Element)
 			tstr =
 				resetElements 
 				$ foldl 
-					(\tstr e@(r, _) -> 
+					(\tstr e@(ar, _) -> 
 						addToRelation 
 							(Right e) 1
 							[[[e, e]]]
 						$ addToRelation
-							(Right (one r)) 1
-							[[[e, one r]], [[one r, e]]] 
+							(Right (one ar)) 1
+							[[[e, one ar]], [[one ar, e]]] 
 							tstr
 					) 
 					(structPower str 2) 
