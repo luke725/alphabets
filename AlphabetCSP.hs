@@ -36,17 +36,20 @@ module AlphabetCSP where
 		else
 			Set.fromList (map eltArity (Set.findMin ts))
 	
-	
 
-	checkMajority :: Letter -> Bool
-	checkMajority letter =
+	checkMajorityLetter :: Letter -> Bool
+	checkMajorityLetter letter =	
+		checkMajorityAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
+
+	checkMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Bool
+	checkMajorityAutomorphisms atoms automorphisms =
 		checkAlphMajority rels' && checkAlphMajority rels''
 		where
-			maxAr = Set.size (atoms letter)
+			maxAr = List.length atoms
 			rels = 
 				map 
 					(\(as, s) -> (Left as, List.length as, s)) 
-					(Map.toList (letterRelations letter))
+					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
 			rels' =
 				filter 
 					(\r -> 

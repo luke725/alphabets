@@ -89,17 +89,20 @@ module Letter where
 				where
 					pp = map (\a -> a .^ f) p
 
-
+					
 	letterRelations :: Letter -> Map [[Atom]] (Set (Tuple (Int, Permutation Int)))
 	letterRelations letter =
+		relationsFromAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
+					
+	relationsFromAutomorphisms :: [Atom] -> [Permutation Atom] -> Map [[Atom]] (Set (Tuple (Int, Permutation Int)))
+	relationsFromAutomorphisms atoms automorphisms =
 		removeDup
 		$ Map.fromList
 		$ map
 			(\part -> (part, Set.fromList (Maybe.mapMaybe (translateAutomorphism part) automorphisms)))
 			partitions
 		where
-			automorphisms = letterAutomorphisms letter
-			partitions = Set.toList (allPermPart (Set.toList (atoms letter)))
+			partitions = Set.toList (allPermPart atoms)
 			
 			removeDup :: (Ord a, Ord b) => Map a b -> Map a b
 			removeDup m =

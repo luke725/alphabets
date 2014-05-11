@@ -30,15 +30,7 @@ module RelationalStructure where
 	sigFromRels :: (Ord rname) => [Relation rname element] -> Signature rname
 	sigFromRels rels =
 		Map.fromList (map (\(rname, ar, _) -> (rname, ar)) rels)
-	
-	
-	arity :: Tuple element -> Arity
-	arity = length
-
-	
-	(!!) :: Tuple element -> Int -> element
-	(!!) = (List.!!)
-
+		
 		
 	cartesian :: (Ord a) => Set (Tuple a) -> Set (Tuple a) -> Set (Tuple a)
 	cartesian set1 set2 =
@@ -84,7 +76,7 @@ module RelationalStructure where
 		all check_tuple (Set.toList tuples)
 		where
 			check_tuple t =
-				(arity t == ar) && (all (\e -> Set.member e elts) t)
+				(length t == ar) && (all (\e -> Set.member e elts) t)
 	
 	
 	createStructure 
@@ -132,7 +124,7 @@ module RelationalStructure where
 		-> Bool
 		
 	isInRelation (sig, _, rels) rname t =
-		expectRelation sig rname (arity t) (Set.member t tuple_set)
+		expectRelation sig rname (length t) (Set.member t tuple_set)
 		where
 			(_, _, tuple_set) = Map.findWithDefault (rname, 0, Set.empty) rname rels
 			
