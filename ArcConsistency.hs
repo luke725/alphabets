@@ -149,14 +149,27 @@ module ArcConsistency where
 			case foldl 
 					(\msol a -> msol >>= (\sol -> setSolOnElem sol a)) 
 					(Just initSol) 
-					(Set.toList (elements s1)) 
+					(Set.toList (elements s1')) 
 			of
 				Just sol -> Just (Map.map Set.findMin sol)
 				Nothing  -> Nothing
 		else
 			Nothing
 		where
-			initSol = runSAC s1 s2 (fullPossibleSolutions s1 s2)
+			
+			sig = signature s1
+			sigUnary = Map.filter (\ar -> ar == 1) sig
+			sig' = Map.filter (\ar -> ar > 1) sig
+			
+			s1' = filterRelations sig' s1
+			s2' = filterRelations sig' s2
+			
+			initSol = 
+				runSAC s1' s2' 
+					(runArcConsistency 
+						(filterRelations sigUnary s1) 
+						(filterRelations sigUnary s2)
+						(fullPossibleSolutions s1 s2))
 			
 			setSolOnElem :: PossibleSolutions a b -> a -> Maybe (PossibleSolutions a b)
 			setSolOnElem sol h =
@@ -165,7 +178,7 @@ module ArcConsistency where
 						else
 							List.find (const True)
 							$ filter notEmpty
-							$ map (\ha -> runSAC s1 s2 (Map.insert h (Set.singleton ha) sol))
+							$ map (\ha -> runSAC s1' s2' (Map.insert h (Set.singleton ha) sol))
 							$ Set.toList (sol!h)
 				
 					

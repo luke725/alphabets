@@ -104,6 +104,9 @@ module RelationalStructure where
 		
 	elements :: Structure rname element -> Set element
 	elements (_, elts, _) = elts
+	
+	signature :: Structure rname element -> Signature rname
+	signature (sig, _, _) = sig
 		
 		
 	expectRelation :: (Ord rname, Show rname) => Signature rname -> rname -> Arity -> a -> a
@@ -127,6 +130,13 @@ module RelationalStructure where
 		expectRelation sig rname (length t) (Set.member t tuple_set)
 		where
 			(_, _, tuple_set) = Map.findWithDefault (rname, 0, Set.empty) rname rels
+			
+			
+	filterRelations :: (Ord rname) => Signature rname -> Structure rname element -> Structure rname element
+	filterRelations sig (_, elts, relMap) =
+		(sig, elts, relMap')
+		where
+			relMap' = Map.filterWithKey (\rname _ -> Map.lookup rname sig /= Nothing) relMap
 			
 			
 	addRelation 

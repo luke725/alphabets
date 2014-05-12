@@ -79,7 +79,9 @@ module Letter where
 	
 	translateAutomorphism :: [[Atom]] -> Permutation Atom -> Maybe (Tuple (Int, Permutation Int))
 	translateAutomorphism part f = 
-		allJust (map permute part)
+		case allJust (map permute part) of
+			Just t  -> Just (filter (\(ar, _) -> ar > 1) t)
+			Nothing -> Nothing
 		where
 			permute :: [Atom] -> Maybe (Int, Permutation Int)
 			permute p =
