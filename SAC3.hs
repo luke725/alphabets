@@ -17,6 +17,8 @@ module SAC3 where
 	import RelationalStructure
 	import AC2001
 	
+	import Debug.Trace
+	
 	data Store v d = 
 		Store
 		{ dom :: PossibleSolutions v d
@@ -56,16 +58,18 @@ module SAC3 where
 		if Map.null (qsacLoc st)
 		then return Nothing
 		else do
-			let (v, ds) = Map.findMin (qsacLoc st)
-			put (st {qsacLoc = Map.delete v (qsacLoc st)})
+			let ((v, ds), qsacLoc') = Map.deleteFindMin (qsacLoc st)
+			put (st {qsacLoc = qsacLoc'})
+			
 			let ds' = Set.intersection ds (dom st ! v)
-			if Set.null ds'
-			then
-				pickAndDel
-			else do
-				let d = Set.findMin ds'
-				put (st {qsac = Map.insert v (Set.delete d (qsac st ! v)) (qsac st)})
-				return $ Just (v, d)
+			(if Set.null ds'
+				then
+					pickAndDel
+				else do
+					let d = Set.findMin ds'
+					st' <- get
+					put (st' {qsac = Map.insert v (Set.delete d (qsac st ! v)) (qsac st')})
+					return $ Just (v, d))
 				
 	addToQsac :: (Ord v, Ord d) => v -> d -> State (Store v d) ()
 	addToQsac v d = do
@@ -84,19 +88,16 @@ module SAC3 where
 	removeSingletons = do
 		st <- get
 		let qsac' =
-			foldl (\qsac' (v, d) -> Map.insert v (Set.delete d (qsac' ! v)) qsac') (qsac st)
+			foldl (\qsac' (v, d) -> if Map.member v qsac' then Map.insert v (Set.delete d (qsac' ! v)) qsac' else qsac') (qsac st)
 			$ map (\(v, ds) -> (v, Set.findMin ds)) 
 			$ filter (\(_, ds) -> Set.size ds == 1) 
 			$ Map.toList (dom st)
 		put (st {qsac = qsac'})
-		
-		
-		
-		
-	
-	buildBranch :: (Ord v, Ord d) => ConstraintNetwork v d -> State (Store v d) Bool
+
+
+	buildBranch :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) Bool
 	buildBranch cn = do
-		pd <- pickAndDel 
+		pd <- pickAndDel
 		case pd of
 			Nothing -> return False
 			Just (v, d) -> do
@@ -108,7 +109,6 @@ module SAC3 where
 					let dom'' = ac2001 cn (Map.insert v (Set.delete d (dom ! v)) dom)
 					setDom dom''
 					return (notEmpty dom'')
-								
 		where
 			buildBranch' = do
 				pd <- pickAndDel
@@ -125,17 +125,18 @@ module SAC3 where
 							addToQsac v d
 							removeSingletons
 							return True
-							
-	buildBranches :: (Ord v, Ord d) => ConstraintNetwork v d -> State (Store v d) ()
+
+
+	buildBranches :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) ()
 	buildBranches cn = do
-		c <- buildBranch cn
 		resetQsac
+		c <- buildBranch cn
 		if c
 		then buildBranches cn
 		else return ()
 						
 						
-	sac3' :: (Ord v, Ord d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
+	sac3' :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
 	sac3' cn dom' =
 		sac3'' (ac2001 cn dom')
 		where
@@ -148,15 +149,13 @@ module SAC3 where
 				else dom'
 				where
 					st = execState (buildBranches cn) (Store {dom = dom', qsac = dom', qsacLoc = dom'})
-						
---			qsacFromDom dom =
---				concatMap (\(v, ds) -> map (\d -> (v, d)) (Set.toList ds)) (Map.toList dom)
-				
-	sac3 :: (Ord v, Ord d) => ConstraintNetwork v d -> PossibleSolutions v d
+
+
+	sac3 :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d
 	sac3 cn =
 		sac3' cn (domainMap cn)
 				
-	findSAC3Solution :: (Ord v, Ord d) => ConstraintNetwork v d -> Maybe (Map v d)
+	findSAC3Solution :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> Maybe (Map v d)
 	findSAC3Solution cn =
 		findSol (domainMap cn)
 		where
