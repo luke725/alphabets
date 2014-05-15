@@ -8,12 +8,14 @@ module SAC3 where
 	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
 	import qualified Data.List as List
+	import qualified Data.Maybe as Maybe
 	import Control.Monad
 	import Control.Monad.State
 	import Control.Conditional
 	
 	import ConstraintNetwork
 	import RelationalStructure
+	import AC2001
 	
 	data Store v d = 
 		Store
@@ -40,7 +42,7 @@ module SAC3 where
 		setDom dom''
 		return a
 	
-	withSingletonDom :: v -> d -> State (Store v d) a -> State (Store v d) a
+	withSingletonDom :: (Ord v) => v -> d -> State (Store v d) a -> State (Store v d) a
 	withSingletonDom v d m = do
 		dom <- getDom
 		setDom (Map.insert v (Set.singleton d) dom)
@@ -48,15 +50,15 @@ module SAC3 where
 		setDom dom
 		return a
 		
-	pickAndDel :: State (Store v d) (Maybe (v, d))
+	pickAndDel :: (Ord v, Ord d) => State (Store v d) (Maybe (v, d))
 	pickAndDel = do
 		st <- get
 		if Map.null (qsacLoc st)
-		then Nothing
+		then return Nothing
 		else do
 			let (v, ds) = Map.findMin (qsacLoc st)
 			put (st {qsacLoc = Map.delete v (qsacLoc st)})
-			let ds' = Set.intersect ds (dom st ! v)
+			let ds' = Set.intersection ds (dom st ! v)
 			if Set.null ds'
 			then
 				pickAndDel
@@ -65,23 +67,34 @@ module SAC3 where
 				put (st {qsac = Map.insert v (Set.delete d (qsac st ! v)) (qsac st)})
 				return $ Just (v, d)
 				
-	addToQsac :: v -> d -> State (Store v d) ()
+	addToQsac :: (Ord v, Ord d) => v -> d -> State (Store v d) ()
 	addToQsac v d = do
 		st <- get
 		let qsac' = Map.insertWith Set.union v (Set.singleton d) (qsac st)
-		put (st {qsac = qsac', qsacLoc = Map.insert v (qsac' ! v) qsacLoc})
+		put (st {qsac = qsac', qsacLoc = Map.insert v (qsac' ! v) (qsacLoc st)})
 		
-	resetQsac :: State (Store v d) ()
+	resetQsac :: (Ord v, Ord d) => State (Store v d) ()
 	resetQsac = do
 		st <- get
 		let qsac' = Map.intersectionWith Set.intersection (qsac st) (dom st)
 		let qsac'' = Map.filter (\ds -> not $ Set.null ds) qsac'
 		put (st {qsac = qsac'', qsacLoc = qsac''})
 		
+	removeSingletons :: (Ord v, Ord d) => State (Store v d) ()
+	removeSingletons = do
+		st <- get
+		let qsac' =
+			foldl (\qsac' (v, d) -> Map.insert v (Set.delete d (qsac' ! v)) qsac') (qsac st)
+			$ map (\(v, ds) -> (v, Set.findMin ds)) 
+			$ filter (\(_, ds) -> Set.size ds == 1) 
+			$ Map.toList (dom st)
+		put (st {qsac = qsac'})
+		
+		
 		
 		
 	
-	buildBranch :: ConstraintNetwork v d -> State (Store v d) Bool
+	buildBranch :: (Ord v, Ord d) => ConstraintNetwork v d -> State (Store v d) Bool
 	buildBranch cn = do
 		pd <- pickAndDel 
 		case pd of
@@ -100,7 +113,9 @@ module SAC3 where
 			buildBranch' = do
 				pd <- pickAndDel
 				case pd of
-					Nothing -> return ()
+					Nothing -> do
+						removeSingletons
+						return True
 					Just (v, d) -> do
 						dom <- getDom
 						let dom' = ac2001 cn (Map.insert v (Set.singleton d) dom)
@@ -108,9 +123,10 @@ module SAC3 where
 						then withDom dom' buildBranch'
 						else do
 							addToQsac v d
+							removeSingletons
 							return True
 							
-	buildBranches :: ConstraintNetwork v d -> State (Store v d) ()
+	buildBranches :: (Ord v, Ord d) => ConstraintNetwork v d -> State (Store v d) ()
 	buildBranches cn = do
 		c <- buildBranch cn
 		resetQsac
@@ -119,42 +135,48 @@ module SAC3 where
 		else return ()
 						
 						
-	sac3 :: ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
-	sac3 cn dom =
-		sac3' (ac2001 cn dom)
+	sac3' :: (Ord v, Ord d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
+	sac3' cn dom' =
+		sac3'' (ac2001 cn dom')
 		where
-			sac3' dom' =
+			sac3'' dom' =
 				if notEmpty dom'
 				then 
-					sac3' (dom st)
+					if dom st == dom'
+					then dom'
+					else sac3'' (dom st)
 				else dom'
 				where
-					st = execState (buildBranches cn) (Store {dom = dom', qsac = qsacFromDom dom', qsacLoc = qsacFromDom dom'})
+					st = execState (buildBranches cn) (Store {dom = dom', qsac = dom', qsacLoc = dom'})
 						
-			qsacFromDom dom =
-				concatMap (\(v, ds) -> map (\d -> (v, d)) (Set.toList ds)) (Map.toList dom)
+--			qsacFromDom dom =
+--				concatMap (\(v, ds) -> map (\d -> (v, d)) (Set.toList ds)) (Map.toList dom)
 				
+	sac3 :: (Ord v, Ord d) => ConstraintNetwork v d -> PossibleSolutions v d
+	sac3 cn =
+		sac3' cn (domainMap cn)
 				
-	findSAC3Solution :: ConstraintNetwork v d -> Maybe (Map v d)
+	findSAC3Solution :: (Ord v, Ord d) => ConstraintNetwork v d -> Maybe (Map v d)
 	findSAC3Solution cn =
 		findSol (domainMap cn)
 		where
 			findSol dom =
-				if isEmpty dom
+				if not $ notEmpty dom
 				then Nothing
 				else
 					case 
 						Maybe.listToMaybe 
 						$ filter (\(_, ds) -> Set.size ds > 1)
-						$ Map.fromList dom 
+						$ Map.toList dom
 					of
 						Nothing -> Just $ Map.map (\ds -> Set.findMin ds) dom
 						Just (v, ds) -> 
 							case 
 								Maybe.listToMaybe 
 								$ filter (\dom' -> notEmpty dom') 
-								$ map (\d -> sac3 cn (Map.insert v (Set.singleton d) ds) 
-								$ Set.toList ds of
+								$ map (\d -> sac3' cn (Map.insert v (Set.singleton d) dom))
+								$ Set.toList ds
+							of
 							Just dom' -> findSol dom'
 							Nothing   -> Nothing
 						
