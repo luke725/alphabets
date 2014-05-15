@@ -22,6 +22,7 @@ module SAC3 where
 	data Store v d = 
 		Store
 		{ dom :: PossibleSolutions v d
+		, lastMatch :: Map (v, d, v) d
 		, qsac :: Map v (Set d)
 		, qsacLoc :: Map v (Set d)
 		}
@@ -36,12 +37,24 @@ module SAC3 where
 		st <- get
 		put (st {dom = dom'})
 		
-	withDom :: PossibleSolutions v d -> State (Store v d) a -> State (Store v d) a
-	withDom dom' m = do
-		dom'' <- getDom
-		setDom dom'
+		
+	getLast :: State (Store v d) (Map (v, d, v) d)
+	getLast = do
+		st <- get
+		return (lastMatch st)
+		
+	setLast :: Map (v, d, v) d -> State (Store v d) ()
+	setLast last' = do
+		st <- get
+		put (st {lastMatch = last'})
+		
+	withACStore :: (PossibleSolutions v d, Map (v, d, v) d) -> State (Store v d) a -> State (Store v d) a
+	withACStore (sol, last) m = do
+		st <- get
+		put (st {dom = sol, lastMatch = last})
 		a <- m
-		setDom dom''
+		st' <- get
+		put (st' {dom = (dom st), lastMatch = (lastMatch st)})
 		return a
 	
 	withSingletonDom :: (Ord v) => v -> d -> State (Store v d) a -> State (Store v d) a
@@ -104,12 +117,14 @@ module SAC3 where
 			Nothing -> return CheckedAll
 			Just (v, d) -> do
 				dom <- getDom
-				let dom' = ac2001 cn (Map.insert v (Set.singleton d) dom)
+				last <- getLast
+				let (dom', last') = ac2001 cn (Map.insert v (Set.singleton d) dom, last)
 				if notEmpty dom'
-				then withDom dom' buildBranch'
+				then withACStore (dom', last') buildBranch'
 				else do
-					let dom'' = ac2001 cn (Map.insert v (Set.delete d (dom ! v)) dom)
+					let (dom'', last'') = ac2001 cn (Map.insert v (Set.delete d (dom ! v)) dom, last)
 					setDom dom''
+					setLast last''
 					if notEmpty dom''
 					then return StillRemain
 					else return CheckedAll
@@ -127,9 +142,10 @@ module SAC3 where
 							return StillRemain
 					Just (v, d) -> do
 						dom <- getDom
-						let dom' = ac2001 cn (Map.insert v (Set.singleton d) dom)
+						last <- getLast
+						let (dom', last') = ac2001 cn (Map.insert v (Set.singleton d) dom, last)
 						if notEmpty dom'
-						then withDom dom' buildBranch'
+						then withACStore (dom', last') buildBranch'
 						else do
 							addToQsac v d
 							removeSingletons
@@ -148,18 +164,18 @@ module SAC3 where
 						
 	sac3' :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
 	sac3' cn dom' =
-		sac3'' (ac2001 cn dom')
+		sac3'' (ac2001 cn (dom', Map.empty))
 		where
-			sac3'' dom' =
+			sac3'' (dom', last') =
 				if notEmpty dom'
 				then 
 					if dom st == dom'
 					then dom'
-					else sac3'' (dom st)
+					else sac3'' (dom st, lastMatch st)
 				else dom'
 				where
 					qsac' = Map.filterWithKey (\v _ -> Set.member v (coreElems cn)) dom'
-					st = execState (buildBranches cn) (Store {dom = dom', qsac = qsac', qsacLoc = qsac'})
+					st = execState (buildBranches cn) (Store {dom = dom', qsac = qsac', qsacLoc = qsac', lastMatch = last'})
 
 
 	sac3 :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d
