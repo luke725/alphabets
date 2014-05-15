@@ -50,7 +50,7 @@ module AlphabetCSP where
 			maxAr = List.length atoms
 			rels = 
 				map 
-					(\(as, s) -> (Left as, List.length as, s)) 
+					(\(as, (ar, s)) -> (Left as, ar, s)) 
 					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
 			rels' =
 				filter 
