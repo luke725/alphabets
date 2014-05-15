@@ -2,7 +2,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module OptSAC where
+module AC2001 (ac2001) where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))
@@ -17,43 +17,34 @@ module OptSAC where
 	
 	type PossibleSolutions a b = Map a (Set b)
 	
-	data Store v d = 
-		Store
-		{ -- cn :: ConstrainNetwork v d
-		 dom :: PossibleSolutions v d
+	data ACStore v d = 
+		ACStore
+		{ dom :: PossibleSolutions v d
 		, lastMatch :: Map (v, d, v) d
---		; qSAC :: Map v (Set d)
 		}
-		
-	type SACState v d = State (Store v d)
 	
---	getCN :: SACState (PossibleSolutions v d)
---	getCN = do
---		st <- get
---		return (cn st)
-	
-	getDom :: SACState v d (PossibleSolutions v d)
+	getDom :: State (ACStore v d) (PossibleSolutions v d)
 	getDom = do
 		st <- get
 		return (dom st)
 		
-	setDom :: PossibleSolutions v d -> SACState v d ()
+	setDom :: PossibleSolutions v d -> State (ACStore v d) ()
 	setDom dom' = do
 		st <- get
 		put (st {dom = dom'})
 		
-	getLast :: (Ord v, Ord d) => v -> d -> v -> SACState v d (Maybe d)
+	getLast :: (Ord v, Ord d) => v -> d -> v -> State (ACStore v d) (Maybe d)
 	getLast v1 d1 v2 = do
 		st <- get
 		return (Map.lookup (v1, d1, v2) (lastMatch st))
 		
-	setLast :: (Ord v, Ord d) => v -> d -> v -> d -> SACState v d ()
+	setLast :: (Ord v, Ord d) => v -> d -> v -> d -> State (ACStore v d) ()
 	setLast v1 d1 v2 d2 = do
 		st <- get
 		put (st { lastMatch = Map.insert (v1, d1, v2) d2 (lastMatch st) })
 		
 		
-	isLastOk :: (Ord v, Ord d) => v -> d -> v -> SACState v d Bool
+	isLastOk :: (Ord v, Ord d) => v -> d -> v -> State (ACStore v d) Bool
 	isLastOk v1 d1 v2 = do
 		dom <- getDom
 		l <- getLast v1 d1 v2
@@ -61,14 +52,14 @@ module OptSAC where
 			Just d2 -> return (Set.member d2 (dom ! v2))
 			Nothing -> return False
 	
-	revise :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d -> v -> v -> SACState v d Bool
+	revise :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d -> v -> v -> State (ACStore v d) Bool
 	revise cn v w = do
 		dom <- getDom
 		dToCheck <- filterM (\d -> notM $ isLastOk v d w) (Set.toList (dom ! v))
 		hasChangedList <- mapM (\d -> reviseElem v d w) dToCheck
 		return (or hasChangedList)
 		where
-			reviseElem :: v -> d -> v -> SACState v d Bool
+			reviseElem :: v -> d -> v -> State (ACStore v d) Bool
 			reviseElem v1 d1 v2 = do
 				dom <- getDom
 				l <- getLast v1 d1 v2
@@ -93,9 +84,9 @@ module OptSAC where
 		else Nothing
 		where
 			(res, store) =
-				runState (run qInit) (Store {dom = sol, lastMatch = Map.empty })
+				runState (run qInit) (ACStore {dom = sol, lastMatch = Map.empty })
 				
-			run :: [(v, v)] -> SACState v d Bool
+			run :: [(v, v)] -> State (ACStore v d) Bool
 			run [] = return True
 			run ((v, w):t) = do
 				changed <- revise cn v w
@@ -111,7 +102,12 @@ module OptSAC where
 					
 			qInit = 
 				concatMap (\(v, ws) -> map (\w -> (v, w)) $ Set.toList ws) 
-				$ Map.toList 
+				$ Map.toList
 				$ neighborsMap cn
+				
+				
+
+				
+	
 	
 	
