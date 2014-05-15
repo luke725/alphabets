@@ -13,7 +13,7 @@ module Letter where
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PermutationGroup
 
-	import RelationalStructure (Tuple)
+	import RelationalStructure (Tuple, Arity)
 	
 	type Atom = Int
 	
@@ -92,16 +92,19 @@ module Letter where
 					pp = map (\a -> a .^ f) p
 
 					
-	letterRelations :: Letter -> Map [[Atom]] (Set (Tuple (Int, Permutation Int)))
+	letterRelations :: Letter -> Map [[Atom]] (Arity, Set (Tuple (Int, Permutation Int)))
 	letterRelations letter =
 		relationsFromAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
 					
-	relationsFromAutomorphisms :: [Atom] -> [Permutation Atom] -> Map [[Atom]] (Set (Tuple (Int, Permutation Int)))
+	relationsFromAutomorphisms :: [Atom] -> [Permutation Atom] -> Map [[Atom]] (Arity, Set (Tuple (Int, Permutation Int)))
 	relationsFromAutomorphisms atoms automorphisms =
 		removeDup
 		$ Map.fromList
 		$ map
-			(\part -> (part, Set.fromList (Maybe.mapMaybe (translateAutomorphism part) automorphisms)))
+			(\part -> 
+				(part, 
+				(length $ filter (\l -> length l > 1) part, Set.fromList (Maybe.mapMaybe (translateAutomorphism part) automorphisms)))
+			)
 			partitions
 		where
 			partitions = Set.toList (allPermPart atoms)
