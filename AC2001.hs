@@ -2,7 +2,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module AC2001 (ac2001, notEmpty, PossibleSolutions) where
+module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))
@@ -12,6 +12,8 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions) where
 	import Control.Monad.State
 	import Control.Conditional
 	
+	import Debug.Trace
+	
 	import ConstraintNetwork
 	import RelationalStructure
 	
@@ -19,19 +21,19 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions) where
 	
 	data ACStore v d = 
 		ACStore
-		{ dom :: PossibleSolutions v d
+		{ solutions :: PossibleSolutions v d
 		, lastMatch :: Map (v, d, v) d
 		}
 	
-	getDom :: State (ACStore v d) (PossibleSolutions v d)
-	getDom = do
+	getSolutions :: State (ACStore v d) (PossibleSolutions v d)
+	getSolutions = do
 		st <- get
-		return (dom st)
+		return (solutions st)
 		
-	setDom :: PossibleSolutions v d -> State (ACStore v d) ()
-	setDom dom' = do
+	setSolutions :: PossibleSolutions v d -> State (ACStore v d) ()
+	setSolutions solutions' = do
 		st <- get
-		put (st {dom = dom'})
+		put (st {solutions = solutions'})
 		
 	getLast :: (Ord v, Ord d) => v -> d -> v -> State (ACStore v d) (Maybe d)
 	getLast v1 d1 v2 = do
@@ -46,26 +48,26 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions) where
 		
 	isLastOk :: (Ord v, Ord d) => v -> d -> v -> State (ACStore v d) Bool
 	isLastOk v1 d1 v2 = do
-		dom <- getDom
+		sol <- getSolutions
 		l <- getLast v1 d1 v2
 		case l of
-			Just d2 -> return (Set.member d2 (dom ! v2))
+			Just d2 -> return (Set.member d2 (sol ! v2))
 			Nothing -> return False
 	
 	revise :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d -> v -> v -> State (ACStore v d) Bool
 	revise cn v w = do
-		dom <- getDom
-		dToCheck <- filterM (\d -> notM $ isLastOk v d w) (Set.toList (dom ! v))
+		sol <- getSolutions
+		dToCheck <- filterM (\d -> notM $ isLastOk v d w) (Set.toList (sol ! v))
 		hasChangedList <- mapM (\d -> reviseElem v d w) dToCheck
 		return (or hasChangedList)
 		where
 			reviseElem :: v -> d -> v -> State (ACStore v d) Bool
 			reviseElem v1 d1 v2 = do
-				dom <- getDom
+				sol <- getSolutions
 				l <- getLast v1 d1 v2
 				let dSet = case l of
-					Just d2Old -> snd (Set.split d2Old (dom ! v2))
-					Nothing    -> dom ! v2
+					Just d2Old -> snd (Set.split d2Old (sol ! v2))
+					Nothing    -> sol ! v2
 				let tuples = constraint cn (v1, v2)
 				let d2Possible =  filter (\d2 -> Set.member (d1, d2) tuples) (Set.toList dSet)
 				case d2Possible of
@@ -73,16 +75,28 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions) where
 						setLast v1 d1 v2 d2
 						return False -- didn't change
 					[] -> do
-						setDom (Map.insert v1 (Set.delete d1 (dom!v1)) dom)
+						setSolutions (Map.insert v1 (Set.delete d1 (sol!v1)) sol)
 						return True
+						
+	qInit :: ConstraintNetwork v d -> [(v, v)]
+	qInit cn = 
+		concatMap (\(v, ws) -> map (\w -> (v, w)) $ Set.toList ws) 
+		$ Map.toList
+		$ neighborsMap cn
+		
+	qInitFrom :: (Ord v) => ConstraintNetwork v d -> v -> [(v, v)]
+	qInitFrom cn w =
+		map (\v -> (v, w))
+		$ Set.toList (neighborsMap cn ! w)
 					
 					
-	ac2001 :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
-	ac2001 cn sol =
-		dom store
+	ac2001 :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d  -> [(v, v)] -> (PossibleSolutions v d, Map (v, d, v) d) -> (PossibleSolutions v d, Map (v, d, v) d)
+	ac2001 cn q (sol', last') =
+--		trace "ac2001" 
+		(solutions store', lastMatch store')
 		where
-			((), store) =
-				runState (run qInit) (ACStore {dom = sol, lastMatch = Map.empty })
+			((), store') =
+				runState (run q) (ACStore {solutions = sol', lastMatch = last'})
 				
 			run :: [(v, v)] -> State (ACStore v d) ()
 			run [] = return ()
@@ -90,18 +104,13 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions) where
 				changed <- revise cn v w
 				if changed 
 				then do
-					dom <- getDom
-					if Set.null (dom ! v)
+					sol <- getSolutions
+					if Set.null (sol ! v)
 					then return ()
 					else
 						run ((map (\w' -> (w', v)) $ Set.toList $ Set.delete w $ neighbors cn v) ++ t)
 				else
 					run t
-					
-			qInit = 
-				concatMap (\(v, ws) -> map (\w -> (v, w)) $ Set.toList ws) 
-				$ Map.toList
-				$ neighborsMap cn
 				
 				
 	notEmpty :: PossibleSolutions a b -> Bool

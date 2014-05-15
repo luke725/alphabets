@@ -12,6 +12,7 @@ module AlphabetCSP where
 	import qualified Control.Monad as Monad
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
+	import Debug.Trace
 
 	import RelationalStructure
 	import Letter
@@ -74,8 +75,11 @@ module AlphabetCSP where
 
 	checkAlphMajority :: [Relation RName Element] -> Bool
 	checkAlphMajority rels =
-		findSAC3Solution (fromCSP tstr str) /= Nothing
+--		trace (stats tstr ++ "; " ++ stats str)
+--		$ trace (cnStats cn)
+		(findSAC3Solution cn /= Nothing)
 		where
+			cn = (fromCSP tstr str)
 			elts = elementsFromRels rels
 			
 			rels' = rels ++ map (\e -> (Right e, 1, Set.singleton [e])) (Set.toList elts)

@@ -13,17 +13,23 @@ module ConstraintNetwork where
 
 	data ConstraintNetwork v d = 
 		ConstraintNetwork 
-			{ domainMap :: Map v (Set d)
+			{ coreElems :: Set v
+			, domainMap :: Map v (Set d)
 			, constraintMap :: Map (v, v) (Set (d, d)) -- symmetric
 			, neighborsMap :: Map v (Set v)
 			} deriving Show
 	
 	data CSPType e = CSPElem e | CSPTuple (Tuple e) deriving (Show, Eq, Ord)
 	
-	create :: (Ord v, Ord d) => Map v (Set d) -> Map (v, v) (Set (d, d)) -> ConstraintNetwork v d
-	create domainMap' constraintMap' =
+	cnStats :: ConstraintNetwork v d -> String
+	cnStats cn =
+		"core elems: " ++ show (Set.size $ coreElems cn) ++ ", nbs: " ++ show (sum $ map Set.size $ Map.elems $ constraintMap cn)
+	
+	create :: (Ord v, Ord d) => Set v -> Map v (Set d) -> Map (v, v) (Set (d, d)) -> ConstraintNetwork v d
+	create coreElems' domainMap' constraintMap' =
 		ConstraintNetwork
-			{ domainMap = domainMap', 
+			{ coreElems = coreElems',
+			  domainMap = domainMap', 
 			  constraintMap = symConstraintMap, 
 			  neighborsMap = neighborsMap'
 			}
@@ -67,7 +73,7 @@ module ConstraintNetwork where
 	 
 	fromCSP :: forall rname v d. (Ord rname, Ord d, Ord v) => Structure rname v -> Structure rname d -> ConstraintNetwork (CSPType v) (CSPType d)
 	fromCSP (sig, eltsV, relMapV) (_, eltsD, relMapD) =
-		create domainMap constraintMap
+		create coreElems domainMap constraintMap
 		where
 			nonUnaryRels = 
 				map (\(rname, _) -> rname) $ filter (\(_, ar) -> ar > 1) (Map.toList sig)
@@ -110,6 +116,9 @@ module ConstraintNetwork where
 				
 			domainTuplesList =
 				concatMap relRestList nonUnaryRels
+				
+			coreElems = 
+				Set.fromList $ map (\(v, _) -> CSPElem v) domainEltsList
 				
 			domainMap =
 				mapFromRestList

@@ -22,6 +22,7 @@ module SAC3 where
 	data Store v d = 
 		Store
 		{ dom :: PossibleSolutions v d
+		, lastMatch :: Map (v, d, v) d
 		, qsac :: Map v (Set d)
 		, qsacLoc :: Map v (Set d)
 		}
@@ -36,12 +37,24 @@ module SAC3 where
 		st <- get
 		put (st {dom = dom'})
 		
-	withDom :: PossibleSolutions v d -> State (Store v d) a -> State (Store v d) a
-	withDom dom' m = do
-		dom'' <- getDom
-		setDom dom'
+		
+	getLast :: State (Store v d) (Map (v, d, v) d)
+	getLast = do
+		st <- get
+		return (lastMatch st)
+		
+	setLast :: Map (v, d, v) d -> State (Store v d) ()
+	setLast last' = do
+		st <- get
+		put (st {lastMatch = last'})
+		
+	withACStore :: (PossibleSolutions v d, Map (v, d, v) d) -> State (Store v d) a -> State (Store v d) a
+	withACStore (sol, last) m = do
+		st <- get
+		put (st {dom = sol, lastMatch = last})
 		a <- m
-		setDom dom''
+		st' <- get
+		put (st' {dom = (dom st), lastMatch = (lastMatch st)})
 		return a
 	
 	withSingletonDom :: (Ord v) => v -> d -> State (Store v d) a -> State (Store v d) a
@@ -94,70 +107,85 @@ module SAC3 where
 			$ Map.toList (dom st)
 		put (st {qsac = qsac'})
 
+	
+	data BranchResult v d = CheckedAll | StillRemain | Finished (Map v d)
 
-	buildBranch :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) Bool
+	buildBranch :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) (BranchResult v d)
 	buildBranch cn = do
 		pd <- pickAndDel
 		case pd of
-			Nothing -> return False
+			Nothing -> return CheckedAll
 			Just (v, d) -> do
 				dom <- getDom
-				let dom' = ac2001 cn (Map.insert v (Set.singleton d) dom)
+				last <- getLast
+				let (dom', last') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom, last)
 				if notEmpty dom'
-				then withDom dom' buildBranch'
+				then withACStore (dom', last') buildBranch'
 				else do
-					let dom'' = ac2001 cn (Map.insert v (Set.delete d (dom ! v)) dom)
+					let (dom'', last'') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.delete d (dom ! v)) dom, last)
 					setDom dom''
-					return (notEmpty dom'')
+					setLast last''
+					if notEmpty dom''
+					then return StillRemain
+					else return CheckedAll
 		where
 			buildBranch' = do
 				pd <- pickAndDel
 				case pd of
 					Nothing -> do
-						removeSingletons
-						return True
+						dom <- getDom
+						if all (\ds -> Set.size ds == 1) (Map.elems dom)
+						then
+							return $ Finished $ Map.map Set.findMin dom
+						else do
+							removeSingletons
+							return StillRemain
 					Just (v, d) -> do
 						dom <- getDom
-						let dom' = ac2001 cn (Map.insert v (Set.singleton d) dom)
+						last <- getLast
+						let (dom', last') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom, last)
 						if notEmpty dom'
-						then withDom dom' buildBranch'
+						then withACStore (dom', last') buildBranch'
 						else do
 							addToQsac v d
 							removeSingletons
-							return True
+							return StillRemain
 
 
-	buildBranches :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) ()
+	buildBranches :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) (Maybe (Map v d))
 	buildBranches cn = do
 		resetQsac
 		c <- buildBranch cn
-		if c
-		then buildBranches cn
-		else return ()
+		case c of
+			CheckedAll  -> return Nothing
+			StillRemain -> buildBranches cn
+			Finished m  -> return $ Just m
+
 						
-						
-	sac3' :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
-	sac3' cn dom' =
-		sac3'' (ac2001 cn dom')
+	sac3' :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> [(v, v)] -> PossibleSolutions v d -> PossibleSolutions v d
+	sac3' cn q dom' =
+--		trace "SAC3" 
+		sac3'' (ac2001 cn q (dom', Map.empty))
 		where
-			sac3'' dom' =
+			sac3'' (dom', last') =
 				if notEmpty dom'
 				then 
 					if dom st == dom'
 					then dom'
-					else sac3'' (dom st)
+					else sac3'' (dom st, lastMatch st)
 				else dom'
 				where
-					st = execState (buildBranches cn) (Store {dom = dom', qsac = dom', qsacLoc = dom'})
+					qsac' = Map.filterWithKey (\v _ -> Set.member v (coreElems cn)) dom'
+					st = execState (buildBranches cn) (Store {dom = dom', qsac = qsac', qsacLoc = qsac', lastMatch = last'})
 
 
 	sac3 :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d
 	sac3 cn =
-		sac3' cn (domainMap cn)
+		sac3' cn (qInit cn) (domainMap cn)
 				
 	findSAC3Solution :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> Maybe (Map v d)
 	findSAC3Solution cn =
-		findSol (domainMap cn)
+		findSol (sac3 cn)
 		where
 			findSol dom =
 				if not $ notEmpty dom
@@ -166,14 +194,15 @@ module SAC3 where
 					case 
 						Maybe.listToMaybe 
 						$ filter (\(_, ds) -> Set.size ds > 1)
+						$ filter (\(v, _) -> Set.member v (coreElems cn))
 						$ Map.toList dom
 					of
-						Nothing -> Just $ Map.map (\ds -> Set.findMin ds) dom
+						Nothing -> Just $ Map.map (\ds -> Set.findMin ds) $ Map.filterWithKey (\v _ -> Set.member v (coreElems cn)) dom
 						Just (v, ds) -> 
 							case 
 								Maybe.listToMaybe 
 								$ filter (\dom' -> notEmpty dom') 
-								$ map (\d -> sac3' cn (Map.insert v (Set.singleton d) dom))
+								$ map (\d -> sac3' cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom))
 								$ Set.toList ds
 							of
 							Just dom' -> findSol dom'
