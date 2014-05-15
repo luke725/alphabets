@@ -94,12 +94,14 @@ module SAC3 where
 			$ Map.toList (dom st)
 		put (st {qsac = qsac'})
 
+	
+	data BranchResult v d = CheckedAll | StillRemain | Finished (Map v d)
 
-	buildBranch :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) Bool
+	buildBranch :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) (BranchResult v d)
 	buildBranch cn = do
 		pd <- pickAndDel
 		case pd of
-			Nothing -> return False
+			Nothing -> return CheckedAll
 			Just (v, d) -> do
 				dom <- getDom
 				let dom' = ac2001 cn (Map.insert v (Set.singleton d) dom)
@@ -108,14 +110,21 @@ module SAC3 where
 				else do
 					let dom'' = ac2001 cn (Map.insert v (Set.delete d (dom ! v)) dom)
 					setDom dom''
-					return (notEmpty dom'')
+					if notEmpty dom''
+					then return StillRemain
+					else return CheckedAll
 		where
 			buildBranch' = do
 				pd <- pickAndDel
 				case pd of
 					Nothing -> do
-						removeSingletons
-						return True
+						dom <- getDom
+						if all (\ds -> Set.size ds == 1) (Map.elems dom)
+						then
+							return $ Finished $ Map.map Set.findMin dom
+						else do
+							removeSingletons
+							return StillRemain
 					Just (v, d) -> do
 						dom <- getDom
 						let dom' = ac2001 cn (Map.insert v (Set.singleton d) dom)
@@ -124,17 +133,18 @@ module SAC3 where
 						else do
 							addToQsac v d
 							removeSingletons
-							return True
+							return StillRemain
 
 
-	buildBranches :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) ()
+	buildBranches :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> State (Store v d) (Maybe (Map v d))
 	buildBranches cn = do
 		resetQsac
 		c <- buildBranch cn
-		if c
-		then buildBranches cn
-		else return ()
-						
+		case c of
+			CheckedAll  -> return Nothing
+			StillRemain -> buildBranches cn
+			Finished m  -> return $ Just m
+
 						
 	sac3' :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
 	sac3' cn dom' =
@@ -148,7 +158,8 @@ module SAC3 where
 					else sac3'' (dom st)
 				else dom'
 				where
-					st = execState (buildBranches cn) (Store {dom = dom', qsac = dom', qsacLoc = dom'})
+					qsac' = Map.filterWithKey (\v _ -> Set.member v (coreElems cn)) dom'
+					st = execState (buildBranches cn) (Store {dom = dom', qsac = qsac', qsacLoc = qsac'})
 
 
 	sac3 :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d
