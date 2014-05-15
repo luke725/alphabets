@@ -2,7 +2,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module AC2001 (ac2001) where
+module AC2001 (ac2001, notEmpty, PossibleSolutions) where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))
@@ -77,24 +77,22 @@ module AC2001 (ac2001) where
 						return True
 					
 					
-	ac2001 :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d -> PossibleSolutions v d -> Maybe (PossibleSolutions v d)
+	ac2001 :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
 	ac2001 cn sol =
-		if res
-		then Just (dom store)
-		else Nothing
+		dom store
 		where
-			(res, store) =
+			((), store) =
 				runState (run qInit) (ACStore {dom = sol, lastMatch = Map.empty })
 				
-			run :: [(v, v)] -> State (ACStore v d) Bool
-			run [] = return True
+			run :: [(v, v)] -> State (ACStore v d) ()
+			run [] = return ()
 			run ((v, w):t) = do
 				changed <- revise cn v w
 				if changed 
 				then do
 					dom <- getDom
 					if Set.null (dom ! v)
-					then return False
+					then return ()
 					else
 						run ((map (\w' -> (w', v)) $ Set.toList $ Set.delete w $ neighbors cn v) ++ t)
 				else
@@ -104,6 +102,11 @@ module AC2001 (ac2001) where
 				concatMap (\(v, ws) -> map (\w -> (v, w)) $ Set.toList ws) 
 				$ Map.toList
 				$ neighborsMap cn
+				
+				
+	notEmpty :: PossibleSolutions a b -> Bool
+	notEmpty sol =
+		all (\set -> not (Set.null set)) (Map.elems sol)
 				
 				
 

@@ -16,6 +16,8 @@ module AlphabetCSP where
 	import RelationalStructure
 	import Letter
 	import ArcConsistency
+	import SAC3
+	import ConstraintNetwork
 	
 	type Element = (Arity, Permutation Int)
 
@@ -72,7 +74,7 @@ module AlphabetCSP where
 
 	checkAlphMajority :: [Relation RName Element] -> Bool
 	checkAlphMajority rels =
-		findSACSolution tstr str /= Nothing
+		findSAC3Solution (fromCSP tstr str) /= Nothing
 		where
 			elts = elementsFromRels rels
 			
