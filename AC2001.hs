@@ -92,7 +92,7 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) w
 					
 	ac2001 :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d  -> [(v, v)] -> (PossibleSolutions v d, Map (v, d, v) d) -> (PossibleSolutions v d, Map (v, d, v) d)
 	ac2001 cn q (sol', last') =
---		trace "ac2001" 
+--		trace "ac2001"
 		(solutions store', lastMatch store')
 		where
 			((), store') =

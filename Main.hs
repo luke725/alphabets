@@ -1,5 +1,7 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 import Control.Parallel.Strategies
 import System.Environment
 
@@ -33,12 +35,27 @@ run atoms cyclesList =
 	where
 		automorphisms = SS.elts (map (PG.fromCycles) cyclesList)
 		
+run2 :: [Atom] -> [[[Atom]]] -> [[[Atom]]] -> Bool
+run2 atoms cyclesList1 cyclesList2 =
+	checkMajorityAutomorphismsMany atoms [autos1, autos2]
+	where
+		autos1 = SS.elts (map (PG.fromCycles) cyclesList1)
+		autos2 = SS.elts (map (PG.fromCycles) cyclesList2)
+		
 runAll :: [Atom] -> [[[[Atom]]]] -> [([[[Atom]]], Bool)]
 runAll atoms sl =
 	runEval (myParMap (\cl -> showRes (cl, run atoms cl)) sl)
 	
 showRes res = 
 	trace (show res) res
+	
+myZz :: [a] -> [(a, a)]
+myZz l = 
+	concatMap (\(as, a) -> map (\b -> (b, a)) as) (zz [] l)
+	where
+		zz _ [] = []
+		zz l (h:t) =
+			(l, h):zz (h:l) t
 	
 myParMap :: (a -> b) -> [a] -> Eval [b]
 myParMap f [] = return []
@@ -47,14 +64,25 @@ myParMap f (a:as) = do
    bs <- myParMap f as
    return (b:bs)
 	
-main = do
+main'' = do
 	args <- getArgs
 	let n = read (List.head args)
 	putStrLn $ show $ runAll [1..n] (s !! (n-1))
 	
 main' =
 	putStrLn $ show $ run [1..5] [ [[3,4,5]], [[4,5]] ]
-
+	
+main = do
+	let n = 6
+	l <- getLine
+	let rs :: [([[[Atom]]], Bool)] = read l
+	let z = map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
+	let zzt = myZz z
+	let zz = runEval (myParMap (\(as1, as2) -> ((as1, as2), run2 [1..n] as1 as2)) zzt)
+	let z2 = map (\(ass, _) -> ass) $ filter (\(_, b) -> not b) zz
+	putStrLn $ show $ Maybe.listToMaybe z2
+	
+	
 s :: [[[[[Atom]]]]]
 s = [s1, s2, s3, s4, s5, s6, s7]
 
