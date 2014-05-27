@@ -22,7 +22,7 @@ module AlphabetCSP where
 	
 	type Element = (Arity, Permutation Int)
 
-	type RName = Either [[Atom]] Element
+	type RName = (Either ([Permutation Atom], [[Atom]]) Element)
 
 	type AStructure a = Structure RName a
 
@@ -51,8 +51,41 @@ module AlphabetCSP where
 			maxAr = List.length atoms
 			rels = 
 				map 
-					(\(as, (ar, s)) -> (Left as, ar, s)) 
+					(\(as, (ar, s)) -> (Left (automorphisms, as), ar, s)) 
 					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
+			rels' =
+				filter 
+					(\r -> 
+						Set.null 
+							(Set.intersection 
+								(Set.fromList [maxAr, maxAr - 1, maxAr - 2]) 
+								(eltArities r))
+					) 
+					rels
+			
+			rels'' =
+				filter
+					(\r ->
+						not $ Set.null
+							(Set.intersection
+								(Set.fromList [maxAr - 2, 1, 2])
+								(eltArities r))
+					)
+					rels
+					
+	checkMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Bool
+	checkMajorityAutomorphismsMany atoms automorphismsList =
+		checkAlphMajority rels' && checkAlphMajority rels''
+		where
+			maxAr = List.length atoms
+			rels = 
+				concatMap 
+					(\autos ->
+						map (\(as, (ar, s)) -> (Left (autos, as), ar, s)) 
+						$ Map.toList (relationsFromAutomorphisms atoms autos)
+					)
+					automorphismsList
+					
 			rels' =
 				filter 
 					(\r -> 
