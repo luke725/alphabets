@@ -21,6 +21,10 @@ module ConstraintNetwork where
 	
 	data CSPType e = CSPElem e | CSPTuple (Tuple e) deriving (Show, Eq, Ord)
 	
+	cnStats :: ConstraintNetwork v d -> String
+	cnStats cn =
+		"core elems: " ++ show (Set.size $ coreElems cn) ++ ", nbs: " ++ show (sum $ map Set.size $ Map.elems $ constraintMap cn)
+	
 	create :: (Ord v, Ord d) => Set v -> Map v (Set d) -> Map (v, v) (Set (d, d)) -> ConstraintNetwork v d
 	create coreElems' domainMap' constraintMap' =
 		ConstraintNetwork

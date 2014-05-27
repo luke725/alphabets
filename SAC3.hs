@@ -118,11 +118,11 @@ module SAC3 where
 			Just (v, d) -> do
 				dom <- getDom
 				last <- getLast
-				let (dom', last') = ac2001 cn (Map.insert v (Set.singleton d) dom, last)
+				let (dom', last') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom, last)
 				if notEmpty dom'
 				then withACStore (dom', last') buildBranch'
 				else do
-					let (dom'', last'') = ac2001 cn (Map.insert v (Set.delete d (dom ! v)) dom, last)
+					let (dom'', last'') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.delete d (dom ! v)) dom, last)
 					setDom dom''
 					setLast last''
 					if notEmpty dom''
@@ -143,7 +143,7 @@ module SAC3 where
 					Just (v, d) -> do
 						dom <- getDom
 						last <- getLast
-						let (dom', last') = ac2001 cn (Map.insert v (Set.singleton d) dom, last)
+						let (dom', last') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom, last)
 						if notEmpty dom'
 						then withACStore (dom', last') buildBranch'
 						else do
@@ -162,9 +162,10 @@ module SAC3 where
 			Finished m  -> return $ Just m
 
 						
-	sac3' :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d -> PossibleSolutions v d
-	sac3' cn dom' =
-		sac3'' (ac2001 cn (dom', Map.empty))
+	sac3' :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> [(v, v)] -> PossibleSolutions v d -> PossibleSolutions v d
+	sac3' cn q dom' =
+--		trace "SAC3" 
+		sac3'' (ac2001 cn q (dom', Map.empty))
 		where
 			sac3'' (dom', last') =
 				if notEmpty dom'
@@ -180,11 +181,11 @@ module SAC3 where
 
 	sac3 :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> PossibleSolutions v d
 	sac3 cn =
-		sac3' cn (domainMap cn)
+		sac3' cn (qInit cn) (domainMap cn)
 				
 	findSAC3Solution :: (Ord v, Ord d, Show v, Show d) => ConstraintNetwork v d -> Maybe (Map v d)
 	findSAC3Solution cn =
-		findSol (domainMap cn)
+		findSol (sac3 cn)
 		where
 			findSol dom =
 				if not $ notEmpty dom
@@ -193,14 +194,15 @@ module SAC3 where
 					case 
 						Maybe.listToMaybe 
 						$ filter (\(_, ds) -> Set.size ds > 1)
+						$ filter (\(v, _) -> Set.member v (coreElems cn))
 						$ Map.toList dom
 					of
-						Nothing -> Just $ Map.map (\ds -> Set.findMin ds) dom
+						Nothing -> Just $ Map.map (\ds -> Set.findMin ds) $ Map.filterWithKey (\v _ -> Set.member v (coreElems cn)) dom
 						Just (v, ds) -> 
 							case 
 								Maybe.listToMaybe 
 								$ filter (\dom' -> notEmpty dom') 
-								$ map (\d -> sac3' cn (Map.insert v (Set.singleton d) dom))
+								$ map (\d -> sac3' cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom))
 								$ Set.toList ds
 							of
 							Just dom' -> findSol dom'

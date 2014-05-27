@@ -51,6 +51,9 @@ main = do
 	args <- getArgs
 	let n = read (List.head args)
 	putStrLn $ show $ runAll [1..n] (s !! (n-1))
+	
+main' =
+	putStrLn $ show $ run [1..5] [ [[3,4,5]], [[4,5]] ]
 
 s :: [[[[[Atom]]]]]
 s = [s1, s2, s3, s4, s5, s6, s7]

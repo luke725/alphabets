@@ -21,6 +21,10 @@ module RelationalStructure where
 	
 	type Structure rname element = 
 		(Signature rname, Set element, Map rname (Relation rname element))
+		
+	stats :: Structure rname element -> String
+	stats (sig, elems, _) =
+		"rels: " ++ show (Map.size sig) ++ ", elems: " ++ show (Set.size elems)
 	
 	
 	sigFromList :: (Ord rname) => [(rname, Arity)] -> Signature rname
