@@ -5,15 +5,15 @@
 module Letter where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
-	import qualified Data.List as List
 	import Data.Map (Map)
 	import qualified Data.Map as Map
+	import qualified Data.List as List
 	import qualified Data.Maybe as Maybe
-	import qualified Control.Monad as Monad
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PermutationGroup
 
-	import RelationalStructure (Tuple, Arity)
+	import RelationalStructure (Arity)
+	import Utils
 	
 	type Atom = Int
 	
@@ -46,36 +46,13 @@ module Letter where
 				map 
 					(\perm -> PermutationGroup.fromPairs (zip ats perm)) 
 					(List.permutations ats)
-		
-			
-	allPartitions :: [a] -> [[[a]]]
-	allPartitions l =
-		allPartitions' l [] []
-		where
-			allPartitions' :: [a] -> [a] -> [[a]] -> [[[a]]]
-			allPartitions' [] [] sol = [reverse sol]
-			allPartitions' [] (ha:ta) sol = [reverse (reverse (ha:ta) : sol)]
-			allPartitions' (h:t) [] sol = allPartitions' t [h] sol
-			allPartitions' (h:t) (ha:ta) sol =
-				allPartitions' t (h:ha:ta) sol
-				++ allPartitions' (h:t) [] (reverse (ha:ta) : sol)
-
-	allPermPart :: (Ord a) => [a] -> Set ([[a]])
-	allPermPart l =
-		Set.fromList 
-			(concatMap 
-				(\p -> map List.sort (allPartitions p)) 
-				(List.permutations l))
 				
 			
 	automorphismPreservesPartition :: [[Atom]] -> Permutation Atom -> Bool
 	automorphismPreservesPartition part f =
 		all (\set -> set == Set.map (\a -> a .^ f) set) partSets
 		where
-			partSets = map Set.fromList part
-		
-	allJust :: [Maybe a] -> Maybe [a]
-	allJust = Monad.sequence	
+			partSets = map Set.fromList part	
 	
 	translateAutomorphism :: [[Atom]] -> Permutation Atom -> Maybe (Tuple (Int, Permutation Int))
 	translateAutomorphism part f = 
@@ -96,14 +73,19 @@ module Letter where
 	letterRelations letter =
 		relationsFromAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
 					
-	relationsFromAutomorphisms :: [Atom] -> [Permutation Atom] -> Map [[Atom]] (Arity, Set (Tuple (Int, Permutation Int)))
+	relationsFromAutomorphisms 
+		:: [Atom] 
+		-> [Permutation Atom] 
+		-> Map [[Atom]] (Arity, Set (Tuple (Int, Permutation Int)))
+
 	relationsFromAutomorphisms atoms automorphisms =
 		removeDup
 		$ Map.fromList
 		$ map
 			(\part -> 
 				(part, 
-				(length $ filter (\l -> length l > 1) part, Set.fromList (Maybe.mapMaybe (translateAutomorphism part) automorphisms)))
+				(length $ filter (\l -> length l > 1) part,
+				 Set.fromList (Maybe.mapMaybe (translateAutomorphism part) automorphisms)))
 			)
 			partitions
 		where
@@ -117,3 +99,4 @@ module Letter where
 				$ Map.fromList 
 				$ map (\(a, b) -> (b, a)) 
 				$ Map.toList m
+

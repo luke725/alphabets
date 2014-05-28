@@ -10,6 +10,7 @@ module ConstraintNetwork where
 	import qualified Data.List as List
 
 	import RelationalStructure
+	import Utils
 
 	data ConstraintNetwork v d = 
 		ConstraintNetwork 

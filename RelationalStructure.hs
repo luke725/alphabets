@@ -8,13 +8,12 @@ module RelationalStructure where
 	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
 	import qualified Data.List as List
-	
+
+	import Utils
 
 	type Arity = Int
 	
 	type Signature rname = Map rname Arity
-	
-	type Tuple element = [element]
 	
 	type Relation rname element = 
 		(rname, Arity, Set (Tuple element))
@@ -34,23 +33,6 @@ module RelationalStructure where
 	sigFromRels :: (Ord rname) => [Relation rname element] -> Signature rname
 	sigFromRels rels =
 		Map.fromList (map (\(rname, ar, _) -> (rname, ar)) rels)
-		
-		
-	cartesian :: (Ord a) => Set (Tuple a) -> Set (Tuple a) -> Set (Tuple a)
-	cartesian set1 set2 =
-		Set.unions (map (\t1 -> Set.map (\t2 -> t1 ++ t2) set2) (Set.toList set1))
-	
-		
-	cartesianPower :: (Ord a) => Set a -> Int -> Set (Tuple a)
-	cartesianPower set i = 
-		cartesianPower' set' i empty
-		where
-			empty = Set.fromList [[]]
-			set' = Set.map (\a -> [a]) set
-			cartesianPower' set' i tail =
-				if i <= 0
-				then tail
-				else cartesianPower' set' (i-1) (cartesian set' tail)
 				
 	
 	relationArity :: (Ord rname) => Signature rname -> rname -> Arity

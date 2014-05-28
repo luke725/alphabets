@@ -16,9 +16,9 @@ module AlphabetCSP where
 
 	import RelationalStructure
 	import Letter
-	import ArcConsistency
 	import SAC3
 	import ConstraintNetwork
+	import Utils
 	
 	type Element = (Arity, Permutation Int)
 
@@ -43,6 +43,7 @@ module AlphabetCSP where
 	checkMajorityLetter :: Letter -> Bool
 	checkMajorityLetter letter =	
 		checkMajorityAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
+		
 
 	checkMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Bool
 	checkMajorityAutomorphisms atoms automorphisms =
@@ -108,8 +109,6 @@ module AlphabetCSP where
 
 	checkAlphMajority :: [Relation RName Element] -> Bool
 	checkAlphMajority rels =
---		trace (stats tstr ++ "; " ++ stats str)
---		$ trace (cnStats cn)
 		(findSAC3Solution cn /= Nothing)
 		where
 			cn = (fromCSP tstr str)

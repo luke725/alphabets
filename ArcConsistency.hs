@@ -10,10 +10,9 @@ module ArcConsistency where
 	import qualified Data.List as List
 	import RelationalStructure
 	import Debug.Trace
-
-	
-	type PossibleSolutions a b = Map a (Set b)
-
+	import PossibleSolutions (PossibleSolutions)
+	import qualified PossibleSolutions as PS
+	import Utils
 
 	fullPossibleSolutions 
 		:: Ord a 
@@ -22,12 +21,7 @@ module ArcConsistency where
 		-> PossibleSolutions a b
 
 	fullPossibleSolutions (_, elts1, _) (_, elts2, _) =
-		Map.fromList (map (\e1 -> (e1, elts2)) (Set.toList elts1))
-		
-		
-	notEmpty :: PossibleSolutions a b -> Bool
-	notEmpty sol =
-		all (\set -> not (Set.null set)) (Map.elems sol)
+		PS.full elts1 elts2
 		
 		
 	checkArcConsistency 
@@ -37,7 +31,7 @@ module ArcConsistency where
 		-> Bool
 		
 	checkArcConsistency s1 s2 =
-		notEmpty (runArcConsistency s1 s2 (fullPossibleSolutions s1 s2))
+		PS.notEmpty (runArcConsistency s1 s2 (fullPossibleSolutions s1 s2))
 		
 		
 	runArcConsistency
@@ -81,7 +75,7 @@ module ArcConsistency where
 				-> PossibleSolutions a b
 		
 			stepTuple t1 rel2 sol =
-				(Map.union newPosSol sol)
+				foldl (\sol (a, sb) -> PS.setDomain a sb sol) sol (Map.toList newPosSol)
 				where
 					(_, _, tuples2) = rel2
 		
@@ -91,7 +85,7 @@ module ArcConsistency where
 					possiblePartSol :: [Tuple (a, b)]
 					possiblePartSol = 
 						filter 
-							(all (\(a, b) -> Set.member b (sol!a))) 
+							(all (\(a, b) -> Set.member b (PS.domain sol a))) 
 							zipTuples
 			
 					newPosSol =
@@ -108,7 +102,7 @@ module ArcConsistency where
 		-> Bool
 		
 	checkSAC s1 s2 =
-		notEmpty (runSAC s1 s2 (fullPossibleSolutions s1 s2))
+		PS.notEmpty (runSAC s1 s2 (fullPossibleSolutions s1 s2))
 		
 		
 	runSAC 
@@ -125,13 +119,13 @@ module ArcConsistency where
 		where
 			sol' = runArcConsistency s1 s2 sol
 			sol'' = 
-				Map.mapWithKey 
+				PS.map 
 					(\a sa ->
 						if Set.size sa <= 1
 						then sa
 						else
 							Set.filter (\b -> 
-								notEmpty (runArcConsistency s1 s2 (Map.insert a (Set.singleton b) sol)))
+								PS.notEmpty (runArcConsistency s1 s2 (PS.setValue a b sol)))
 								sa
 					) 
 					sol'
@@ -144,14 +138,14 @@ module ArcConsistency where
 			-> Maybe (Map a b)
 			
 	findSACSolution s1 s2 =
-		if notEmpty initSol
+		if PS.notEmpty initSol
 		then
 			case foldl 
 					(\msol a -> msol >>= (\sol -> setSolOnElem sol a)) 
 					(Just initSol) 
 					(Set.toList (elements s1')) 
 			of
-				Just sol -> Just (Map.map Set.findMin sol)
+				Just sol -> Just (PS.anySolution sol)
 				Nothing  -> Nothing
 		else
 			Nothing
@@ -173,13 +167,13 @@ module ArcConsistency where
 			
 			setSolOnElem :: PossibleSolutions a b -> a -> Maybe (PossibleSolutions a b)
 			setSolOnElem sol h =
-						if Set.size (sol!h) == 1
+						if Set.size (PS.domain sol h) == 1
 						then Just sol
 						else
 							List.find (const True)
-							$ filter notEmpty
-							$ map (\ha -> runSAC s1' s2' (Map.insert h (Set.singleton ha) sol))
-							$ Set.toList (sol!h)
+							$ filter PS.notEmpty
+							$ map (\ha -> runSAC s1' s2' (PS.setValue h ha sol))
+							$ Set.toList (PS.domain sol h)
 				
 					
 	detectMajority 
