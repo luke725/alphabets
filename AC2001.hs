@@ -2,7 +2,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) where
+module AC2001 (ac2001, ACStore, qInit, qInitFrom) where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))
@@ -16,8 +16,8 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) w
 	
 	import ConstraintNetwork
 	import RelationalStructure
-	
-	type PossibleSolutions a b = Map a (Set b)
+	import PossibleSolutions (PossibleSolutions)
+	import qualified PossibleSolutions as PS
 	
 	data ACStore v d = 
 		ACStore
@@ -51,13 +51,13 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) w
 		sol <- getSolutions
 		l <- getLast v1 d1 v2
 		case l of
-			Just d2 -> return (Set.member d2 (sol ! v2))
+			Just d2 -> return (Set.member d2 (PS.domain sol v2))
 			Nothing -> return False
 	
 	revise :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d -> v -> v -> State (ACStore v d) Bool
 	revise cn v w = do
 		sol <- getSolutions
-		dToCheck <- filterM (\d -> notM $ isLastOk v d w) (Set.toList (sol ! v))
+		dToCheck <- filterM (\d -> notM $ isLastOk v d w) (Set.toList (PS.domain sol v))
 		hasChangedList <- mapM (\d -> reviseElem v d w) dToCheck
 		return (or hasChangedList)
 		where
@@ -66,8 +66,8 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) w
 				sol <- getSolutions
 				l <- getLast v1 d1 v2
 				let dSet = case l of
-					Just d2Old -> snd (Set.split d2Old (sol ! v2))
-					Nothing    -> sol ! v2
+					Just d2Old -> snd (Set.split d2Old (PS.domain sol v2))
+					Nothing    -> PS.domain sol v2
 				let tuples = constraint cn (v1, v2)
 				let d2Possible =  filter (\d2 -> Set.member (d1, d2) tuples) (Set.toList dSet)
 				case d2Possible of
@@ -75,7 +75,7 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) w
 						setLast v1 d1 v2 d2
 						return False -- didn't change
 					[] -> do
-						setSolutions (Map.insert v1 (Set.delete d1 (sol!v1)) sol)
+						setSolutions (PS.removeFromDomain v1 d1 sol)
 						return True
 						
 	qInit :: ConstraintNetwork v d -> [(v, v)]
@@ -105,17 +105,13 @@ module AC2001 (ac2001, notEmpty, PossibleSolutions, ACStore, qInit, qInitFrom) w
 				if changed 
 				then do
 					sol <- getSolutions
-					if Set.null (sol ! v)
+					if Set.null (PS.domain sol v)
 					then return ()
 					else
 						run ((map (\w' -> (w', v)) $ Set.toList $ Set.delete w $ neighbors cn v) ++ t)
 				else
 					run t
-				
-				
-	notEmpty :: PossibleSolutions a b -> Bool
-	notEmpty sol =
-		all (\set -> not (Set.null set)) (Map.elems sol)
+
 				
 				
 

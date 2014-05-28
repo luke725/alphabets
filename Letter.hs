@@ -13,7 +13,8 @@ module Letter where
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PermutationGroup
 
-	import RelationalStructure (Tuple, Arity)
+	import RelationalStructure (Arity)
+	import Utils
 	
 	type Atom = Int
 	

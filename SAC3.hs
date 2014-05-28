@@ -16,6 +16,8 @@ module SAC3 where
 	import ConstraintNetwork
 	import RelationalStructure
 	import AC2001
+	import PossibleSolutions (PossibleSolutions)
+	import qualified PossibleSolutions as PS
 	
 	import Debug.Trace
 	
@@ -119,13 +121,13 @@ module SAC3 where
 				dom <- getDom
 				last <- getLast
 				let (dom', last') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom, last)
-				if notEmpty dom'
+				if PS.notEmpty dom'
 				then withACStore (dom', last') buildBranch'
 				else do
 					let (dom'', last'') = ac2001 cn (qInitFrom cn v) (Map.insert v (Set.delete d (dom ! v)) dom, last)
 					setDom dom''
 					setLast last''
-					if notEmpty dom''
+					if PS.notEmpty dom''
 					then return StillRemain
 					else return CheckedAll
 		where
@@ -168,7 +170,7 @@ module SAC3 where
 		sac3'' (ac2001 cn q (dom', Map.empty))
 		where
 			sac3'' (dom', last') =
-				if notEmpty dom'
+				if PS.notEmpty dom'
 				then 
 					if dom st == dom'
 					then dom'
@@ -188,7 +190,7 @@ module SAC3 where
 		findSol (sac3 cn)
 		where
 			findSol dom =
-				if not $ notEmpty dom
+				if not $ PS.notEmpty dom
 				then Nothing
 				else
 					case 
@@ -201,7 +203,7 @@ module SAC3 where
 						Just (v, ds) -> 
 							case 
 								Maybe.listToMaybe 
-								$ filter (\dom' -> notEmpty dom') 
+								$ filter (\dom' -> PS.notEmpty dom') 
 								$ map (\d -> sac3' cn (qInitFrom cn v) (Map.insert v (Set.singleton d) dom))
 								$ Set.toList ds
 							of

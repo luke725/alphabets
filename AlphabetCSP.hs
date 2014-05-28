@@ -16,9 +16,9 @@ module AlphabetCSP where
 
 	import RelationalStructure
 	import Letter
-	import ArcConsistency
 	import SAC3
 	import ConstraintNetwork
+	import Utils
 	
 	type Element = (Arity, Permutation Int)
 
