@@ -2,7 +2,7 @@
 
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module AC2001 (ac2001, ACStore, qInit, qInitFrom) where
+module AC2001 (ac2001, ac2001SingleChange, ACStore, Last, emptyLast) where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))
@@ -19,11 +19,19 @@ module AC2001 (ac2001, ACStore, qInit, qInitFrom) where
 	import PossibleSolutions (PossibleSolutions)
 	import qualified PossibleSolutions as PS
 	
+	newtype Last v d = Last (Map (v, d, v) d)
+	
 	data ACStore v d = 
 		ACStore
 		{ solutions :: PossibleSolutions v d
-		, lastMatch :: Map (v, d, v) d
+		, lastMatch :: Last v d
 		}
+		
+	emptyLast :: Last v d
+	emptyLast = (Last Map.empty)
+	
+	lastToMap :: Last v d -> Map (v, d, v) d
+	lastToMap (Last m) = m
 	
 	getSolutions :: State (ACStore v d) (PossibleSolutions v d)
 	getSolutions = do
@@ -38,12 +46,12 @@ module AC2001 (ac2001, ACStore, qInit, qInitFrom) where
 	getLast :: (Ord v, Ord d) => v -> d -> v -> State (ACStore v d) (Maybe d)
 	getLast v1 d1 v2 = do
 		st <- get
-		return (Map.lookup (v1, d1, v2) (lastMatch st))
+		return (Map.lookup (v1, d1, v2) (lastToMap $ lastMatch st))
 		
 	setLast :: (Ord v, Ord d) => v -> d -> v -> d -> State (ACStore v d) ()
 	setLast v1 d1 v2 d2 = do
 		st <- get
-		put (st { lastMatch = Map.insert (v1, d1, v2) d2 (lastMatch st) })
+		put (st { lastMatch = Last $ Map.insert (v1, d1, v2) d2 (lastToMap $ lastMatch st) })
 		
 		
 	isLastOk :: (Ord v, Ord d) => v -> d -> v -> State (ACStore v d) Bool
@@ -90,14 +98,15 @@ module AC2001 (ac2001, ACStore, qInit, qInitFrom) where
 		$ Set.toList (neighborsMap cn ! w)
 					
 					
-	ac2001 
+	ac2001'
 		:: forall v d. (Ord v, Ord d) 
 		=> ConstraintNetwork v d 
-		-> [(v, v)] 
-		-> (PossibleSolutions v d, Map (v, d, v) d) 
-		-> (PossibleSolutions v d, Map (v, d, v) d)
+		-> [(v, v)]
+		-> Last v d
+		-> PossibleSolutions v d 
+		-> (PossibleSolutions v d, Last v d)
 		
-	ac2001 cn q (sol', last') =
+	ac2001' cn q last' sol' =
 		(solutions store', lastMatch store')
 		where
 			((), store') =
@@ -116,7 +125,25 @@ module AC2001 (ac2001, ACStore, qInit, qInitFrom) where
 						run ((map (\w' -> (w', v)) $ Set.toList $ Set.delete w $ neighbors cn v) ++ t)
 				else
 					run t
+					
+		
+	ac2001 
+		:: (Ord v, Ord d) 
+		=> ConstraintNetwork v d 
+		-> Last v d 
+		-> PossibleSolutions v d 
+		-> (PossibleSolutions v d, Last v d)
+	ac2001 cn last' sol' = ac2001' cn (qInit cn) last' sol' 
 
+	ac2001SingleChange 
+		:: (Ord v, Ord d) 
+		=> ConstraintNetwork v d
+		-> v
+		-> Last v d 
+		-> PossibleSolutions v d 
+		-> (PossibleSolutions v d, Last v d)
+		
+	ac2001SingleChange cn v last' sol' = ac2001' cn (qInitFrom cn v) last' sol' 
 				
 				
 
