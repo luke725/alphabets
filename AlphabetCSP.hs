@@ -43,6 +43,7 @@ module AlphabetCSP where
 	checkMajorityLetter :: Letter -> Bool
 	checkMajorityLetter letter =	
 		checkMajorityAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
+		
 
 	checkMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Bool
 	checkMajorityAutomorphisms atoms automorphisms =

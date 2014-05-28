@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Utils where
+	import Debug.Trace
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
@@ -53,3 +54,15 @@ module Utils where
 				
 	allJust :: [Maybe a] -> Maybe [a]
 	allJust = Monad.sequence
+	
+	showRes :: (Show a) => a -> a
+	showRes res = 
+		trace (show res) res
+	
+	square :: [a] -> [(a, a)]
+	square l = 
+		concatMap (\(as, a) -> map (\b -> (b, a)) as) (zz [] l)
+		where
+			zz _ [] = []
+			zz l (h:t) =
+				(l, h):zz (h:l) t

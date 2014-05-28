@@ -1,25 +1,52 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
+{-# LANGUAGE ScopedTypeVariables #-}
+
 module Data where
-	s :: [[[[[Int]]]]]
+	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))	
+	import qualified Math.Algebra.Group.PermutationGroup as PG
+	import qualified Math.Algebra.Group.SchreierSims as SS
+
+	import Letter
+	
+	type GroupGens = [[[Atom]]]
+	
+	elements :: GroupGens -> [Permutation Atom]
+	elements cyclesList = SS.elts (map (PG.fromCycles) cyclesList)
+	
+	classes6 :: IO [[GroupGens]]
+	classes6 = do
+		clf <- readFile "data6.txt"
+		let cl :: [[[[[Atom]]]]] = read clf
+		return cl
+--		return $ map (map automorphisms) cl
+		
+	results6 :: IO [(GroupGens, Bool)]
+	results6 = do
+		l <- readFile "all8.txt"
+		let rs :: [([[[Atom]]], Bool)] = read l
+		return rs
+--		return $ map (\(as, b) -> (automorphisms as, b)) rs
+
+	s :: [[GroupGens]]
 	s = [s1, s2, s3, s4, s5, s6, s7]
 
-	s1 :: [[[[Int]]]]
+	s1 :: [GroupGens]
 	s1 = [ [  ] ]
 
-	s2 :: [[[[Int]]]]
+	s2 :: [GroupGens]
 	s2 = [ [ [[]] ], [ [[1,2]] ] ]
 
-	s3 :: [[[[Int]]]]
+	s3 :: [GroupGens]
 	s3 = [ [  ], [ [[2,3]] ], [ [[1,2,3]] ], [ [[1,2,3]], [[2,3]] ] ]
 
-	s4 :: [[[[Int]]]]
+	s4 :: [GroupGens]
 	s4 = [ [  ], [ [[1,3],[2,4]] ], [ [[3,4]] ], [ [[2,4,3]] ], [ [[1,4],[2,3]], [[1,3],[2,4]] ], 
 	  [ [[3,4]], [[1,2],[3,4]] ], [ [[1,3,2,4]], [[1,2],[3,4]] ], [ [[3,4]], [[2,4,3]] ], 
 	  [ [[1,4],[2,3]], [[1,3],[2,4]], [[3,4]] ], [ [[1,4],[2,3]], [[1,3],[2,4]], [[2,4,3]] ], 
 	  [ [[1,4],[2,3]], [[1,3],[2,4]], [[2,4,3]], [[3,4]] ] ]
 	  
-	s5 :: [[[[Int]]]]
+	s5 :: [GroupGens]
 	s5 = [ [  ], [ [[4,5]] ], [ [[2,3],[4,5]] ], [ [[3,4,5]] ], [ [[2,3],[4,5]], [[2,4],[3,5]] ], 
 	  [ [[2,3],[4,5]], [[2,4,3,5]] ], [ [[4,5]], [[2,3]] ], [ [[1,2,3,4,5]] ], 
 	  [ [[3,4,5]], [[4,5]] ], [ [[3,4,5]], [[1,2],[4,5]] ], [ [[4,5]], [[1,2,3]] ], 
@@ -30,7 +57,7 @@ module Data where
 	  [ [[1,2,3,4,5]], [[1,2]] ] ]
 
 
-	s6 :: [[[[Int]]]]
+	s6 :: [GroupGens]
 	s6 = [ [  ], [ [[5,6]] ], [ [[1,2],[3,4],[5,6]] ], [ [[3,4],[5,6]] ], [ [[4,5,6]] ], 
 	  [ [[1,2,3],[4,5,6]] ], [ [[3,4],[5,6]], [[1,2],[5,6]] ], [ [[3,4],[5,6]], [[3,5],[4,6]] ], 
 	  [ [[3,4],[5,6]], [[1,2],[3,5,4,6]] ], [ [[3,4],[5,6]], [[1,2],[3,5],[4,6]] ], 
@@ -65,7 +92,7 @@ module Data where
 	  [ [[1,5,4,3,2]], [[2,4,3]], [[4,5]] ], [ [[1,5,3,6,4]], [[1,6],[2,4]], [[3,4,6,5]] ], 
 	  [ [[1,2,3,4,5]], [[4,5,6]] ], [ [[1,2,3,4,5,6]], [[1,2]] ] ]
 	  
-	s7 :: [[[[Int]]]]
+	s7 :: [GroupGens]
 	s7 = [ [  ], [ [[6,7]] ], [ [[4,5],[6,7]] ], [ [[2,3],[4,5],[6,7]] ], [ [[5,6,7]] ], 
 	  [ [[2,3,4],[5,6,7]] ], [ [[4,5],[6,7]], [[4,6],[5,7]] ], [ [[4,5],[6,7]], [[2,3],[6,7]] ], 
 	  [ [[6,7]], [[4,5]] ], [ [[4,5],[6,7]], [[4,6,5,7]] ], [ [[4,5],[6,7]], [[2,3],[4,6,5,7]] ],
