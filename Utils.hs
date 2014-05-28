@@ -6,6 +6,8 @@ module Utils where
 	import Debug.Trace
 	import Data.Set (Set)
 	import qualified Data.Set as Set
+	import Data.Map (Map)
+	import qualified Data.Map as Map
 	import qualified Data.List as List
 	import qualified Control.Monad as Monad
 	
@@ -77,3 +79,12 @@ module Utils where
 			zz _ [] = []
 			zz l (h:t) =
 				(h:l, h):zz (h:l) t
+				
+	removeDup :: (Ord a, Ord b) => Map a b -> Map a b
+	removeDup m =
+		Map.fromList 
+		$ map (\(b, a) -> (a, b)) 
+		$ Map.toList 
+		$ Map.fromList 
+		$ map (\(a, b) -> (b, a)) 
+		$ Map.toList m
