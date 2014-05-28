@@ -90,9 +90,14 @@ module AC2001 (ac2001, ACStore, qInit, qInitFrom) where
 		$ Set.toList (neighborsMap cn ! w)
 					
 					
-	ac2001 :: forall v d. (Ord v, Ord d) => ConstraintNetwork v d  -> [(v, v)] -> (PossibleSolutions v d, Map (v, d, v) d) -> (PossibleSolutions v d, Map (v, d, v) d)
+	ac2001 
+		:: forall v d. (Ord v, Ord d) 
+		=> ConstraintNetwork v d 
+		-> [(v, v)] 
+		-> (PossibleSolutions v d, Map (v, d, v) d) 
+		-> (PossibleSolutions v d, Map (v, d, v) d)
+		
 	ac2001 cn q (sol', last') =
---		trace "ac2001"
 		(solutions store', lastMatch store')
 		where
 			((), store') =

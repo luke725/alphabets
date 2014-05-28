@@ -12,6 +12,12 @@ module PossibleSolutions where
 	
 	newtype PossibleSolutions a b = PossibleSolutions (Map a (Set b)) deriving (Eq)
 	
+	toMap :: PossibleSolutions a b -> Map a (Set b)
+	toMap (PossibleSolutions m) = m
+	
+	fromMap :: Map a (Set b) -> PossibleSolutions a b
+	fromMap m = PossibleSolutions m
+	
 	full :: (Ord a) => Set a -> Set b -> PossibleSolutions a b
 	full sa sb = 
 		PossibleSolutions $ Map.fromList (List.map (\a -> (a, sb)) (Set.toList sa))
