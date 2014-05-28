@@ -58,6 +58,17 @@ module Utils where
 	showRes :: (Show a) => a -> a
 	showRes res = 
 		trace (show res) res
+		
+	
+	cube :: [a] -> [(a, a, a)]
+	cube l =
+		concatMap (\(as, a) -> map (\(b, c) -> (b, c, a)) (sq as)) (zz [] l)
+		where
+			zz _ [] = []
+			zz l (h:t) =
+				(h:l, h):zz (h:l) t
+			sq l =
+				concatMap (\x -> map (\y -> (x, y)) l) l	
 	
 	square :: [a] -> [(a, a)]
 	square l = 
@@ -65,4 +76,4 @@ module Utils where
 		where
 			zz _ [] = []
 			zz l (h:t) =
-				(l, h):zz (h:l) t
+				(h:l, h):zz (h:l) t

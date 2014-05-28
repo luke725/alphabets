@@ -61,9 +61,33 @@ pairs _ = do
 	let negRes = map (\(ass, _) -> ass) $ filter (\(_, b) -> not b) allRes
 	putStrLn $ show $ Maybe.listToMaybe negRes
 	
+triples _ = do
+	let n = 6
+	rs <- results6
+	cl <- classes6
+	let standard = take 15 $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
+	let triples = 
+		concatMap 
+			(\(as1, as2, as3) -> 
+				concatMap 
+					(\as3' -> map (\as2' -> (as1, as2', as3')) (Maybe.fromJust $ List.find (List.elem as2) cl)) 
+					(Maybe.fromJust $ List.find (List.elem as3) cl)
+			)
+			(cube standard)
+	let allRes = 
+		runEval (myParMap 
+			(\(as1, as2, as3) -> 
+				showRes ((as1, as2, as3), checkMajorityAutomorphismsMany [1..n] [elements as1, elements as2, elements as3])
+			) 
+			triples)
+	let negRes = map (\(ass, _) -> ass) $ filter (\(_, b) -> not b) allRes
+	putStrLn $ show $ Maybe.listToMaybe negRes
+
+	
 main = do
 	args <- getArgs
 	case head args of
 		"run" -> run (tail args)
 		"pairs" -> pairs (tail args)
+		"triples" -> triples (tail args)
 
