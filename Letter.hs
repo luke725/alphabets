@@ -90,13 +90,4 @@ module Letter where
 			partitions
 		where
 			partitions = Set.toList (allPermPart atoms)
-			
-			removeDup :: (Ord a, Ord b) => Map a b -> Map a b
-			removeDup m =
-				Map.fromList 
-				$ map (\(b, a) -> (a, b)) 
-				$ Map.toList 
-				$ Map.fromList 
-				$ map (\(a, b) -> (b, a)) 
-				$ Map.toList m
 

@@ -82,6 +82,16 @@ triples _ = do
 			triples)
 	let negRes = map (\(ass, _) -> ass) $ filter (\(_, b) -> not b) allRes
 	putStrLn $ show $ Maybe.listToMaybe negRes
+	
+allTogether _ = do
+	let n = 6
+	rs <- results6
+	cl <- classes6
+	let standard' = map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
+	let standard = concat $ filter (\s -> any (\x -> List.elem x s) standard') cl
+	putStrLn (show $ length standard)
+	let b = checkMajorityAutomorphismsMany [1..n] (map elements standard)
+	putStrLn (show b)
 
 	
 main = do
@@ -90,4 +100,5 @@ main = do
 		"run" -> run (tail args)
 		"pairs" -> pairs (tail args)
 		"triples" -> triples (tail args)
+		"all" -> allTogether (tail args)
 
