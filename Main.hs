@@ -86,9 +86,7 @@ triples _ = do
 allTogether _ = do
 	let n = 6
 	rs <- results6
-	cl <- classes6
-	let standard' = map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
-	let standard = concat $ filter (\s -> any (\x -> List.elem x s) standard') cl
+	let standard = map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
 	let b = checkMajorityAutomorphismsMany [1..n] (map elements standard)
 	putStrLn (show b)
