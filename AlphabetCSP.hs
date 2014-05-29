@@ -79,14 +79,13 @@ module AlphabetCSP where
 		checkAlphMajority rels' && checkAlphMajority rels''
 		where
 			maxAr = List.length atoms
-			rels = 
-				concatMap 
-					(\autos ->
-						map (\(as, (ar, s)) -> (Left (autos, as), ar, s)) 
-						$ Map.toList (relationsFromAutomorphisms atoms autos)
-					)
-					automorphismsList
-					
+			rels =
+				map (\(k, (ar, s)) -> (k, ar, s)) 
+				$ Map.toList
+				$ removeDup
+				$ Map.unions
+				$ map (\autos -> Map.mapKeys (\as -> Left (autos, as)) $ relationsFromAutomorphisms atoms autos)
+				$ automorphismsList
 			rels' =
 				filter 
 					(\r -> 
