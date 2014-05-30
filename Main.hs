@@ -83,10 +83,11 @@ triples _ = do
 	let negRes = map (\(ass, _) -> ass) $ filter (\(_, b) -> not b) allRes
 	putStrLn $ show $ Maybe.listToMaybe negRes
 	
-allTogether _ = do
-	let n = 6
-	rs <- results6
-	let standard = map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
+allTogether args = do
+	let n = 7
+	let k = read (head args)
+	rs <- results7
+	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
 	let b = checkMajorityAutomorphismsMany [1..n] (map elements standard)
 	putStrLn (show b)

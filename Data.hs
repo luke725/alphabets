@@ -19,14 +19,20 @@ module Data where
 		clf <- readFile "data6.txt"
 		let cl :: [[[[[Atom]]]]] = read clf
 		return cl
---		return $ map (map automorphisms) cl
+
 		
 	results6 :: IO [(GroupGens, Bool)]
 	results6 = do
 		l <- readFile "all8.txt"
 		let rs :: [([[[Atom]]], Bool)] = read l
 		return rs
---		return $ map (\(as, b) -> (automorphisms as, b)) rs
+		
+	results7 :: IO [(GroupGens, Bool)]
+	results7 = do
+		l <- readFile "all7.txt"
+		let rs :: [([[[Atom]]], Bool)] = read l
+		return rs
+
 
 	s :: [[GroupGens]]
 	s = [s1, s2, s3, s4, s5, s6, s7]
