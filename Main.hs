@@ -29,7 +29,7 @@ runAll :: [Atom] -> [GroupGens] -> [(GroupGens, Bool)]
 runAll atoms sl =
 	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms atoms (elements cl))) sl)
 	
-myParMap :: (a -> b) -> [a] -> Eval [b]
+myPa	rMap :: (a -> b) -> [a] -> Eval [b]
 myParMap f [] = return []
 myParMap f (a:as) = do
    b <- rpar (f a)
@@ -84,9 +84,9 @@ triples _ = do
 	putStrLn $ show $ Maybe.listToMaybe negRes
 	
 allTogether args = do
-	let n = 7
+	let n = 8
 	let k = read (head args)
-	rs <- results7
+	rs <- results8
 	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
 	let b = checkMajorityAutomorphismsMany [1..n] (map elements standard)
