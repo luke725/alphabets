@@ -23,7 +23,7 @@ module Data where
 		
 	results6 :: IO [(GroupGens, Bool)]
 	results6 = do
-		l <- readFile "all8.txt"
+		l <- readFile "all6.txt"
 		let rs :: [([[[Atom]]], Bool)] = read l
 		return rs
 		
