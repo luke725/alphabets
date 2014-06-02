@@ -29,7 +29,7 @@ runAll :: [Atom] -> [GroupGens] -> [(GroupGens, Bool)]
 runAll atoms sl =
 	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms atoms (elements cl))) sl)
 	
-myPa	rMap :: (a -> b) -> [a] -> Eval [b]
+myParMap :: (a -> b) -> [a] -> Eval [b]
 myParMap f [] = return []
 myParMap f (a:as) = do
    b <- rpar (f a)
