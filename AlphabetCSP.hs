@@ -12,6 +12,7 @@ module AlphabetCSP where
 	import qualified Control.Monad as Monad
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
+	import qualified Math.Algebra.Group.SchreierSims as SS
 	import Debug.Trace
 
 	import RelationalStructure
@@ -25,6 +26,8 @@ module AlphabetCSP where
 	type RName = (Either ([Permutation Atom], [[Atom]]) Element)
 
 	type AStructure a = Structure RName a
+	
+	type GroupGens = [[[Atom]]]
 
 	one :: Arity -> Element
 	one r = (r, PG.p [])
@@ -73,6 +76,55 @@ module AlphabetCSP where
 								(eltArities r))
 					)
 					rels
+					
+	ggElements :: GroupGens -> [Permutation Atom]
+	ggElements gg = SS.elts (map (PG.fromCycles) gg)
+	
+	ggAtoms :: GroupGens -> [Atom]
+	ggAtoms gg = 
+		if n < 4 then
+			ggList ++ [100..(103 - n)]
+		else
+			ggList
+		where
+			n = List.length ggList
+			ggList = List.nub (concat $ concat gg)
+					
+	checkMajorityGG :: GroupGens -> Bool
+	checkMajorityGG gg = checkMajorityAutomorphisms (ggAtoms gg) (ggElements gg)
+	
+	checkMajorityGGMany :: [GroupGens] -> Bool
+	checkMajorityGGMany ggList =
+		checkAlphMajority rels' && checkAlphMajority rels''
+		where
+			maxAr :: Int = List.maximum $ map (\gg -> List.length (ggAtoms gg)) ggList
+			rels =
+				map (\(k, (ar, s)) -> (k, ar, s)) 
+				$ Map.toList
+				$ removeDup
+				$ Map.unions
+				$ map (\gg -> Map.mapKeys (\as -> Left ((ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg) (ggElements gg))
+				$ ggList
+			rels' =
+				filter 
+					(\r -> 
+						Set.null 
+							(Set.intersection 
+								(Set.fromList [maxAr, maxAr - 1, maxAr - 2]) 
+								(eltArities r))
+					) 
+					rels
+			
+			rels'' =
+				filter
+					(\r ->
+						not $ Set.null
+							(Set.intersection
+								(Set.fromList [maxAr - 2, 1, 2])
+								(eltArities r))
+					)
+					rels
+	
 					
 	checkMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Bool
 	checkMajorityAutomorphismsMany atoms automorphismsList =
