@@ -14,9 +14,9 @@ import Data.Map (Map, (!))
 import qualified Data.Map as Map
 import qualified Data.Maybe as Maybe
 import qualified Control.Monad as Monad
-import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
-import qualified Math.Algebra.Group.PermutationGroup as PG
-import qualified Math.Algebra.Group.SchreierSims as SS
+import Math.Algebra.Group.PermutationGroup(Permutation)
+--import qualified Math.Algebra.Group.PermutationGroup as PG
+--import qualified Math.Algebra.Group.SchreierSims as SS
 
 --import RelationalStructure
 import Letter
@@ -27,7 +27,7 @@ import Utils
 		
 runAll :: [Atom] -> [GroupGens] -> [(GroupGens, Bool)]
 runAll atoms sl =
-	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms atoms (elements cl))) sl)
+	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms (ggAtoms cl) (ggElements cl))) sl)
 	
 myParMap :: (a -> b) -> [a] -> Eval [b]
 myParMap f [] = return []
@@ -55,7 +55,7 @@ pairs _ = do
 	let allRes = 
 		runEval (myParMap 
 			(\(as1, as2) -> 
-				showRes ((as1, as2), checkMajorityAutomorphismsMany [1..n] [elements as1, elements as2])
+				showRes ((as1, as2), checkMajorityAutomorphismsMany [1..n] [ggElements as1, ggElements as2])
 			) 
 			pairs)
 	let negRes = map (\(ass, _) -> ass) $ filter (\(_, b) -> not b) allRes
@@ -77,7 +77,7 @@ triples _ = do
 	let allRes = 
 		runEval (myParMap 
 			(\(as1, as2, as3) -> 
-				showRes ((as1, as2, as3), checkMajorityAutomorphismsMany [1..n] [elements as1, elements as2, elements as3])
+				showRes ((as1, as2, as3), checkMajorityAutomorphismsMany [1..n] [ggElements as1, ggElements as2, ggElements as3])
 			) 
 			triples)
 	let negRes = map (\(ass, _) -> ass) $ filter (\(_, b) -> not b) allRes
@@ -89,7 +89,7 @@ allTogether args = do
 	rs <- results7
 	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
-	let b = checkMajorityAutomorphismsMany [1..n] (map elements standard)
+	let b = checkMajorityGGMany standard
 	putStrLn (show b)
 
 	

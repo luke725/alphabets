@@ -3,16 +3,10 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Data where
-	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))	
-	import qualified Math.Algebra.Group.PermutationGroup as PG
-	import qualified Math.Algebra.Group.SchreierSims as SS
+--	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))	
 
 	import Letter
-	
-	type GroupGens = [[[Atom]]]
-	
-	elements :: GroupGens -> [Permutation Atom]
-	elements cyclesList = SS.elts (map (PG.fromCycles) cyclesList)
+	import AlphabetCSP
 	
 	classes6 :: IO [[GroupGens]]
 	classes6 = do

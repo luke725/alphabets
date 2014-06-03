@@ -88,3 +88,4 @@ module Utils where
 		$ Map.fromList 
 		$ map (\(a, b) -> (b, a)) 
 		$ Map.toList m
+
