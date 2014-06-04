@@ -91,12 +91,19 @@ allTogether args = do
 	putStrLn (show $ length standard)
 	let b = checkMajorityGGMany standard
 	putStrLn (show b)
+	
+runPart args = do
+	let n = 7
+	rs <- results7
+	let done = map (\(w, _) -> w) rs
+	putStrLn $ show $ runAll [1..n] $ filter (\x -> not $ elem x done) $ (s !! (n-1))
 
 	
 main = do
 	args <- getArgs
 	case head args of
 		"run" -> run (tail args)
+		"runPart" -> runPart (tail args)
 		"pairs" -> pairs (tail args)
 		"triples" -> triples (tail args)
 		"all" -> allTogether (tail args)
