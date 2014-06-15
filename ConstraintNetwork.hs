@@ -8,6 +8,7 @@ module ConstraintNetwork where
 	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
 	import qualified Data.List as List
+	import Debug.Trace
 
 	import RelationalStructure
 	import Utils
@@ -24,17 +25,40 @@ module ConstraintNetwork where
 	
 	cnStats :: ConstraintNetwork v d -> String
 	cnStats cn =
-		"core elems: " ++ show (Set.size $ coreElems cn) ++ ", nbs: " ++ show (sum $ map Set.size $ Map.elems $ constraintMap cn)
+		"core elems: " 
+		++ show (Set.size $ coreElems cn) 
+		++ ", all: " 
+		++ show (List.length $ Map.keys $ constraintMap cn)  
+		++ ",nbs: " ++ show (sum $ map Set.size $ Map.elems $ constraintMap cn)
+		
+	translate :: (Ord v, Ord d) => ConstraintNetwork v d -> ConstraintNetwork Int Int
+	translate cn =
+		ConstraintNetwork 
+			{ coreElems = coreElems'
+			, domainMap = domainMap'
+			, constraintMap = constraintMap'
+			, neighborsMap = neighborsMap'
+			}
+		where
+			elemsV = Set.toList $ Set.fromList $ concatMap (\(v1, v2) -> [v1, v2]) $ Map.keys $ constraintMap cn
+			elemsD = Set.toList $ Map.fold (\ds s -> Set.fold (\(d1, d2) s -> Set.insert d1 $ Set.insert d2 s) s ds) Set.empty $ constraintMap cn
+			mapV = Map.fromList $ zip elemsV [1..length elemsV]
+			mapD = Map.fromList $ zip elemsD [1..length elemsV]
+			coreElems' = Set.map (\e -> mapV ! e) $ coreElems cn
+			domainMap' = Map.mapKeys (\e -> mapV ! e) $ Map.map (Set.map (\e -> mapD ! e)) $ domainMap cn
+			constraintMap' = Map.mapKeys (\(e1, e2) -> (mapV ! e1, mapV ! e2)) $ Map.map (Set.map (\(e1, e2) -> (mapD ! e1, mapD ! e2))) $ constraintMap cn
+			neighborsMap' = Map.mapKeys (\e -> mapV ! e) $ Map.map (Set.map (\e -> mapV ! e)) $ neighborsMap cn
 	
 	create :: (Ord v, Ord d) => Set v -> Map v (Set d) -> Map (v, v) (Set (d, d)) -> ConstraintNetwork v d
 	create coreElems' domainMap' constraintMap' =
-		ConstraintNetwork
-			{ coreElems = coreElems',
-			  domainMap = domainMap', 
-			  constraintMap = symConstraintMap, 
-			  neighborsMap = neighborsMap'
-			}
+		trace (cnStats cn) cn
 		where
+			cn = ConstraintNetwork
+				{ coreElems = coreElems',
+				  domainMap = domainMap', 
+				  constraintMap = symConstraintMap, 
+				  neighborsMap = neighborsMap'
+				}
 			symConstraintMap =
 				foldl 
 					(\m ((v1, v2), s) -> 

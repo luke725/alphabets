@@ -29,6 +29,9 @@ runAll :: [Atom] -> [GroupGens] -> [(GroupGens, Bool)]
 runAll atoms sl =
 	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms (ggAtoms cl) (ggElements cl))) sl)
 	
+run1 :: GroupGens -> (GroupGens, Bool)
+run1 cl = showRes (cl, checkMajorityAutomorphisms (ggAtoms cl) (ggElements cl))
+	
 myParMap :: (a -> b) -> [a] -> Eval [b]
 myParMap f [] = return []
 myParMap f (a:as) = do
@@ -39,7 +42,6 @@ myParMap f (a:as) = do
 run args = do
 	let n = read (List.head args)
 	putStrLn $ show $ runAll [1..n] (s !! (n-1))
-	
 	
 pairs _ = do
 	let n = 6
@@ -103,6 +105,7 @@ main = do
 	args <- getArgs
 	case head args of
 		"run" -> run (tail args)
+		"run1" -> putStrLn $ show $ run1 [[[1,2,3,4,5]],[[3,4,5]],[[6,7]]]
 		"runPart" -> runPart (tail args)
 		"pairs" -> pairs (tail args)
 		"triples" -> triples (tail args)

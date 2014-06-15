@@ -162,7 +162,7 @@ module AlphabetCSP where
 	checkAlphMajority rels =
 		(findSAC3Solution cn /= Nothing)
 		where
-			cn = (fromCSP tstr str)
+			cn = translate (fromCSP tstr str)
 			elts = elementsFromRels rels
 			
 			rels' = rels ++ map (\e -> (Right e, 1, Set.singleton [e])) (Set.toList elts)
