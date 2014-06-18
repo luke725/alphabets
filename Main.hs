@@ -86,17 +86,17 @@ triples _ = do
 	putStrLn $ show $ Maybe.listToMaybe negRes
 	
 allTogether args = do
-	let n = 7
+	let n = 8
 	let k = read (head args)
-	rs <- results7
+	rs <- results8
 	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
 	let b = checkMajorityGGMany standard
 	putStrLn (show b)
 	
 runPart args = do
-	let n = 7
-	rs <- results7
+	let n = 8
+	rs <- results8
 	let done = map (\(w, _) -> w) rs
 	putStrLn $ show $ runAll [1..n] $ filter (\x -> not $ elem x done) $ (s !! (n-1))
 
