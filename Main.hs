@@ -95,8 +95,8 @@ allTogether args = do
 	putStrLn (show b)
 	
 runPart args = do
-	let n = 7
-	rs <- results7
+	let n = 8
+	rs <- results8
 	let done = map (\(w, _) -> w) rs
 	putStrLn $ show $ runAll [1..n] $ filter (\x -> not $ elem x done) $ (s !! (n-1))
 
