@@ -20,7 +20,7 @@ module ConstraintNetwork where
 			, constraintMap :: Map (v, v) (Set (d, d)) -- symmetric
 			, neighborsMap :: Map v (Set v)
 			} deriving Show
-	
+	 
 	data CSPType e = CSPElem e | CSPTuple (Tuple e) deriving (Show, Eq, Ord)
 	
 	cnStats :: ConstraintNetwork v d -> String
@@ -40,8 +40,16 @@ module ConstraintNetwork where
 			, neighborsMap = neighborsMap'
 			}
 		where
-			elemsV = Set.toList $ Set.fromList $ concatMap (\(v1, v2) -> [v1, v2]) $ Map.keys $ constraintMap cn
-			elemsD = Set.toList $ Map.fold (\ds s -> Set.fold (\(d1, d2) s -> Set.insert d1 $ Set.insert d2 s) s ds) Set.empty $ constraintMap cn
+			elemsV = Set.toList $ Set.fromList (elemsVcm ++ elemsVce ++ elemsVdm ++ elemsVnm)
+			elemsVcm = concatMap (\(v1, v2) -> [v1, v2]) $ Map.keys $ constraintMap cn 
+			elemsVce = Set.toList $ coreElems cn
+			elemsVdm = Map.keys $ domainMap cn
+			elemsVnm = Map.keys $ neighborsMap cn
+			
+			elemsD = Set.toList $ Set.fromList (elemsDcm ++ elemsDdm)
+			elemsDdm = Set.toList $ Set.unions $ Map.elems $ domainMap cn	
+			elemsDcm = Set.toList $ Map.fold (\ds s -> Set.fold (\(d1, d2) s -> Set.insert d1 $ Set.insert d2 s) s ds) Set.empty $ constraintMap cn
+			
 			mapV = Map.fromList $ zip elemsV [1..length elemsV]
 			mapD = Map.fromList $ zip elemsD [1..length elemsV]
 			coreElems' = Set.map (\e -> mapV ! e) $ coreElems cn
