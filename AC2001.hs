@@ -95,7 +95,7 @@ module AC2001 (ac2001, ac2001SingleChange, ACStore, Last, emptyLast) where
 	qInitFrom :: (Ord v) => ConstraintNetwork v d -> v -> [(v, v)]
 	qInitFrom cn w =
 		map (\v -> (v, w))
-		$ Set.toList (neighborsMap cn ! w)
+		$ Set.toList (Map.findWithDefault Set.empty w (neighborsMap cn))
 					
 					
 	ac2001'
