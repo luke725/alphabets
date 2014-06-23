@@ -7,8 +7,7 @@ module ArcConsistency where
 	import qualified Data.Map as Map
 	import qualified Data.List as List
 	import RelationalStructure
-	import Debug.Trace
-
+	
 	
 	type PossibleSolutions a b = Map a (Set b)
 
@@ -60,13 +59,13 @@ module ArcConsistency where
 		-> PossibleSolutions a b 
 		-> PossibleSolutions a b
 		
-	stepAC (sig1, elts1, rels1) (sig2, elts2, rels2) sol =
+	stepAC (sig, _, rels1) (_, _, rels2) sol =
 		foldl 
-			(\sol (tuple1, rel2) -> stepTuple tuple1 rel2 sol)
+			(\sol' (tuple1, rel2) -> stepTuple tuple1 rel2 sol')
 			sol
 			(concatMap 
 				(\rname -> (map (\t -> (t, rels2!rname)) (relationTuples rels1 rname))) 
-				(relationNames sig1))
+				(relationNames sig))
 		where	
 			relationTuples rels name = Set.toList tuples 
 				where 
@@ -78,8 +77,8 @@ module ArcConsistency where
 				-> PossibleSolutions a b 
 				-> PossibleSolutions a b
 		
-			stepTuple t1 rel2 sol =
-				(Map.union newPosSol sol)
+			stepTuple t1 rel2 sol' =
+				(Map.union newPosSol sol')
 				where
 					(_, _, tuples2) = rel2
 		
@@ -89,7 +88,7 @@ module ArcConsistency where
 					possiblePartSol :: [Tuple (a, b)]
 					possiblePartSol = 
 						filter 
-							(all (\(a, b) -> Set.member b (sol!a))) 
+							(all (\(a, b) -> Set.member b (sol'!a))) 
 							zipTuples
 			
 					newPosSol =
@@ -193,10 +192,10 @@ module ArcConsistency where
 			elts = Set.toList (elements s)
 			
 			s' :: Structure (Either rname a) a
-			s' = foldl (\s e -> addRelation (Right e, 1, Set.singleton [e]) s) s elts
+			s' = foldl (\s'' e -> addRelation (Right e, 1, Set.singleton [e]) s'') s elts
 			
 			p' :: Structure (Either rname a) (Tuple a)
-			p' = foldl (\p e -> addRelation (Right e, 1, majTuples e) p) p elts
+			p' = foldl (\p'' e -> addRelation (Right e, 1, majTuples e) p'') p elts
 			majTuples e = 
 				Set.fromList (concatMap (\e' -> [[[e, e, e']], [[e, e', e]], [[e', e, e]]]) elts)
 

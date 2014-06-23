@@ -5,27 +5,12 @@ import System.Environment
 
 import Debug.Trace
 
-import Data.Set (Set)
-import qualified Data.Set as Set
 import qualified Data.List as List
-import Data.Map (Map)
-import qualified Data.Map as Map
-import qualified Data.Maybe as Maybe
-import qualified Control.Monad as Monad
-import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 import qualified Math.Algebra.Group.PermutationGroup as PG
 import qualified Math.Algebra.Group.SchreierSims as SS
 
-import RelationalStructure
 import Letter
-import ArcConsistency
 import AlphabetCSP
-
-triple a b c = setL[setA [a], setA[a,b], setA[a,b,c]]
-
-letter = setL[triple 1 3 5, triple 1 4 6, triple 2 3 6, triple 2 4 5]
-
--- main = putStrLn $ show $ checkMajority letter
 
 run :: [Atom] -> [[[Atom]]] -> Bool
 run atoms cyclesList =
@@ -37,16 +22,18 @@ runAll :: [Atom] -> [[[[Atom]]]] -> [([[[Atom]]], Bool)]
 runAll atoms sl =
 	runEval (myParMap (\cl -> showRes (cl, run atoms cl)) sl)
 	
+showRes :: (Show a) => a -> a
 showRes res = 
 	trace (show res) res
 	
 myParMap :: (a -> b) -> [a] -> Eval [b]
-myParMap f [] = return []
+myParMap _ [] = return []
 myParMap f (a:as) = do
    b <- rpar (f a)
    bs <- myParMap f as
    return (b:bs)
 	
+main :: IO ()
 main = do
 	args <- getArgs
 	let n = read (List.head args)

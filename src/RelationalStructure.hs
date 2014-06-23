@@ -41,10 +41,10 @@ module RelationalStructure where
 		where
 			empty = Set.fromList [[]]
 			set' = Set.map (\a -> [a]) set
-			cartesianPower' set' i tail =
-				if i <= 0
-				then tail
-				else cartesianPower' set' (i-1) (cartesian set' tail)
+			cartesianPower' s j tl =
+				if j <= 0
+				then tl
+				else cartesianPower' s (j-1) (cartesian s tl)
 				
 	
 	relationArity :: (Ord rname) => Signature rname -> rname -> Arity
@@ -89,7 +89,7 @@ module RelationalStructure where
 		where
 			rel_map = 
 				Map.fromList 
-					(map (\(rname, arity, elts) -> (rname, (rname, arity, elts))) rels)
+					(map (\(rname', arity', elts') -> (rname', (rname', arity', elts'))) rels)
 	
 	
 	checkStructure :: (Ord rname, Ord element) => Structure rname element -> Bool
@@ -146,7 +146,7 @@ module RelationalStructure where
 	addRelation rel (sig, elts, rels) =
 		(sig', elts, rels')
 		where
-			(rname, ar, tuples) = rel
+			(rname, ar, _) = rel
 			sig' = Map.insert rname ar sig
 			rels' = Map.insert rname rel rels
 			
@@ -204,7 +204,7 @@ module RelationalStructure where
 		where
 			rels' = 
 				Map.insertWith 
-					(\(rname, ar, ts1) (_, _, ts2) -> (rname, ar, Set.union ts1 ts2)) 
+					(\(rname', ar', ts1) (_, _, ts2) -> (rname', ar', Set.union ts1 ts2)) 
 					rname 
 					(rname, ar, Set.fromList tuples) 
 					rels

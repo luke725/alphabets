@@ -4,11 +4,8 @@ module AlphabetCSP where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
-	import Data.Map (Map)
 	import qualified Data.Map as Map
-	import qualified Data.Maybe as Maybe
-	import qualified Control.Monad as Monad
-	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
+	import Math.Algebra.Group.PermutationGroup(Permutation)
 	import qualified Math.Algebra.Group.PermutationGroup as PG
 
 	import RelationalStructure
@@ -37,7 +34,7 @@ module AlphabetCSP where
 
 	checkMajorityLetter :: Letter -> Bool
 	checkMajorityLetter letter =	
-		checkMajorityAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
+		checkMajorityAutomorphisms (Set.toList (letterAtoms letter)) (letterAutomorphisms letter)
 
 	checkMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Bool
 	checkMajorityAutomorphisms atoms automorphisms =
@@ -83,14 +80,14 @@ module AlphabetCSP where
 			tstr =
 				resetElements 
 				$ foldl 
-					(\tstr e@(ar, _) -> 
+					(\tstr' e@(ar, _) -> 
 						addToRelation 
 							(Right e) 1
 							[[[e, e]]]
 						$ addToRelation
 							(Right (one ar)) 1
 							[[[e, one ar]], [[one ar, e]]] 
-							tstr
+							tstr'
 					) 
 					(structPower str 2) 
 					(Set.toList elts)
