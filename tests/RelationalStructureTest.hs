@@ -19,5 +19,5 @@ module RelationalStructureTest (tests) where
 	testCartesianPowerLength = 
 		QC.testProperty "cartesian power length"
 		$ QC.forAll (QC.elements [0,1,2,3,4])
-		$ (\ar set -> Set.size set < 20 QC.==> Set.null $ Set.filter (\t -> length t /= ar) $ cartesianPower (set :: Set Int) ar)
+		$ (\ar set -> Set.size set < 20 QC.==> Set.null $ Set.filter (\t -> arity t /= Arity ar) $ cartesianPower (set :: Set Int) ar)
 		

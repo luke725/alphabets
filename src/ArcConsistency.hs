@@ -18,8 +18,8 @@ module ArcConsistency where
 		-> Structure rname b 
 		-> PossibleSolutions a b
 
-	fullPossibleSolutions (_, elts1, _) (_, elts2, _) =
-		Map.fromList (map (\e1 -> (e1, elts2)) (Set.toList elts1))
+	fullPossibleSolutions str1 str2 =
+		Map.fromList (map (\e1 -> (e1, strElements str2)) (Set.toList $ strElements str1))
 		
 		
 	notEmpty :: PossibleSolutions a b -> Bool
@@ -59,7 +59,7 @@ module ArcConsistency where
 		-> PossibleSolutions a b 
 		-> PossibleSolutions a b
 		
-	stepAC (sig, _, rels1) (_, _, rels2) sol =
+	stepAC (Structure (sig, _, rels1)) (Structure (_, _, rels2)) sol =
 		foldl 
 			(\sol' (tuple1, rel2) -> stepTuple tuple1 rel2 sol')
 			sol
@@ -69,7 +69,7 @@ module ArcConsistency where
 		where	
 			relationTuples rels name = Set.toList tuples 
 				where 
-					(_, _, tuples) = rels ! name
+					Relation (_, _, tuples) = rels ! name
 			
 			stepTuple 
 				:: Tuple a 
@@ -77,26 +77,26 @@ module ArcConsistency where
 				-> PossibleSolutions a b 
 				-> PossibleSolutions a b
 		
-			stepTuple t1 rel2 sol' =
+			stepTuple (Tuple t1) rel2 sol' =
 				(Map.union newPosSol sol')
 				where
-					(_, _, tuples2) = rel2
+					Relation (_, _, tuples2) = rel2
 		
 					zipTuples :: [Tuple (a, b)]
-					zipTuples = map (\t2 -> zip t1 t2) (Set.toList tuples2)
+					zipTuples = map (\(Tuple t2) -> Tuple $ zip t1 t2) (Set.toList tuples2)
 			
 					possiblePartSol :: [Tuple (a, b)]
 					possiblePartSol = 
 						filter 
-							(all (\(a, b) -> Set.member b (sol'!a))) 
+							(\(Tuple t) -> all (\(a, b) -> Set.member b (sol'!a)) t) 
 							zipTuples
 			
 					newPosSol =
 						foldl 
 							(\m (a, b) -> Map.insertWith Set.union a (Set.singleton b) m)
 							(Map.fromList (map (\a -> (a, Set.empty)) t1))
-							(concat possiblePartSol)
-							
+							(concat $ map (\(Tuple t) -> t) possiblePartSol)
+
 	
 	checkSAC 
 		:: (Ord rname, Ord a, Ord b, Show rname, Show a, Show b)
@@ -146,7 +146,7 @@ module ArcConsistency where
 			case foldl 
 					(\msol a -> msol >>= (\sol -> setSolOnElem sol a)) 
 					(Just initSol) 
-					(Set.toList (elements s1')) 
+					(Set.toList (strElements s1')) 
 			of
 				Just sol -> Just (Map.map Set.findMin sol)
 				Nothing  -> Nothing
@@ -154,9 +154,9 @@ module ArcConsistency where
 			Nothing
 		where
 			
-			sig = signature s1
-			sigUnary = Map.filter (\ar -> ar == 1) sig
-			sig' = Map.filter (\ar -> ar > 1) sig
+			Signature sigMap = signature s1
+			sigUnary = Signature $ Map.filter (\ar -> ar == Arity 1) sigMap
+			sig' = Signature $ Map.filter (\ar -> ar > Arity 1) sigMap
 			
 			s1' = filterRelations sig' s1
 			s2' = filterRelations sig' s2
@@ -189,13 +189,13 @@ module ArcConsistency where
 		where
 			s = renameRelations Left str
 			p = structPower s 3
-			elts = Set.toList (elements s)
+			elts = Set.toList (strElements s)
 			
 			s' :: Structure (Either rname a) a
-			s' = foldl (\s'' e -> addRelation (Right e, 1, Set.singleton [e]) s'') s elts
+			s' = foldl (\s'' e -> addRelation (Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) s'') s elts
 			
 			p' :: Structure (Either rname a) (Tuple a)
-			p' = foldl (\p'' e -> addRelation (Right e, 1, majTuples e) p'') p elts
+			p' = foldl (\p'' e -> addRelation (Relation (Right e, Arity 1, majTuples e)) p'') p elts
 			majTuples e = 
-				Set.fromList (concatMap (\e' -> [[[e, e, e']], [[e, e', e]], [[e', e, e]]]) elts)
+				Set.fromList (concatMap (\e' -> [Tuple [Tuple [e, e, e']], Tuple [Tuple [e, e', e]], Tuple [Tuple [e', e, e]]]) elts)
 

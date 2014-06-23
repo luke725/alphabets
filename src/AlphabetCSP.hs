@@ -12,24 +12,26 @@ module AlphabetCSP where
 	import Letter
 	import ArcConsistency
 	
-	type Element = (Arity, Permutation Int)
+	type Element = (Int, Permutation Int)
 
 	type RName = Either [[Atom]] Element
 
 	type AStructure a = Structure RName a
 
-	one :: Arity -> Element
+	one :: Int -> Element
 	one r = (r, PG.p [])
 	
 	eltArity :: Element -> Int
 	eltArity (ar, _) = ar
 	
-	eltArities :: Relation RName Element -> Set Arity
-	eltArities (_, _, ts) = 
+	eltArities :: Relation RName Element -> Set Int
+	eltArities (Relation (_, _, ts)) = 
 		if Set.null ts
 		then Set.empty
 		else
-			Set.fromList (map eltArity (Set.findMin ts))
+			Set.fromList (map eltArity t)
+		where
+			Tuple t = Set.findMin ts
 	
 
 	checkMajorityLetter :: Letter -> Bool
@@ -43,7 +45,7 @@ module AlphabetCSP where
 			maxAr = List.length atoms
 			rels = 
 				map 
-					(\(as, s) -> (Left as, List.length as, s)) 
+					(\(as, s) -> Relation (Left as, Arity $ List.length as, s)) 
 					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
 			rels' =
 				filter 
@@ -71,7 +73,7 @@ module AlphabetCSP where
 		where
 			elts = elementsFromRels rels
 			
-			rels' = rels ++ map (\e -> (Right e, 1, Set.singleton [e])) (Set.toList elts)
+			rels' = rels ++ map (\e -> Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts)
 			
 			str :: Structure RName Element
 			str = createStructure (sigFromRels rels') elts rels'
@@ -82,11 +84,11 @@ module AlphabetCSP where
 				$ foldl 
 					(\tstr' e@(ar, _) -> 
 						addToRelation 
-							(Right e) 1
-							[[[e, e]]]
+							(Right e) (Arity 1)
+							[Tuple [Tuple [e, e]]]
 						$ addToRelation
-							(Right (one ar)) 1
-							[[[e, one ar]], [[one ar, e]]] 
+							(Right (one ar)) (Arity 1)
+							[Tuple [Tuple [e, one ar]], Tuple [Tuple [one ar, e]]] 
 							tstr'
 					) 
 					(structPower str 2) 
