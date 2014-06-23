@@ -31,7 +31,7 @@ module RelationalStructure where
 	sigFromRels :: (Ord rname) => [Relation rname element] -> Signature rname
 	sigFromRels rels =
 		Map.fromList (map (\(rname, ar, _) -> (rname, ar)) rels)
-				
+
 	
 	relationArity :: (Ord rname) => Signature rname -> rname -> Arity
 	relationArity sig rname = sig ! rname
@@ -75,7 +75,7 @@ module RelationalStructure where
 		where
 			rel_map = 
 				Map.fromList 
-					(map (\(rname, arity, elts) -> (rname, (rname, arity, elts))) rels)
+					(map (\(rname', arity', elts') -> (rname', (rname', arity', elts'))) rels)
 	
 	
 	checkStructure :: (Ord rname, Ord element) => Structure rname element -> Bool
@@ -132,7 +132,7 @@ module RelationalStructure where
 	addRelation rel (sig, elts, rels) =
 		(sig', elts, rels')
 		where
-			(rname, ar, tuples) = rel
+			(rname, ar, _) = rel
 			sig' = Map.insert rname ar sig
 			rels' = Map.insert rname rel rels
 			
@@ -190,7 +190,7 @@ module RelationalStructure where
 		where
 			rels' = 
 				Map.insertWith 
-					(\(rname, ar, ts1) (_, _, ts2) -> (rname, ar, Set.union ts1 ts2)) 
+					(\(rname', ar', ts1) (_, _, ts2) -> (rname', ar', Set.union ts1 ts2)) 
 					rname 
 					(rname, ar, Set.fromList tuples) 
 					rels

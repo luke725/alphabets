@@ -24,22 +24,22 @@ module Letter where
 	setA :: [Atom] -> Letter
 	setA ats = setL (map LAtom ats)
 	
-	atoms :: Letter -> Set Atom
-	atoms (LAtom a) = Set.singleton a
-	atoms (LSet set) = Set.unions (map atoms (Set.toList set))
+	letterAtoms :: Letter -> Set Atom
+	letterAtoms (LAtom a) = Set.singleton a
+	letterAtoms (LSet set) = Set.unions (map letterAtoms (Set.toList set))
 	
 	isAutomorphism :: Letter -> Permutation Atom -> Bool
 	isAutomorphism letter f =
 		applyAutomorphism f letter == letter
 		where
-			applyAutomorphism f (LAtom a) = LAtom (a .^ f)
-			applyAutomorphism f (LSet set) = LSet (Set.map (applyAutomorphism f) set)
+			applyAutomorphism f' (LAtom a) = LAtom (a .^ f')
+			applyAutomorphism f' (LSet set) = LSet (Set.map (applyAutomorphism f') set)
 	
 	letterAutomorphisms :: Letter -> [Permutation Atom]
 	letterAutomorphisms letter =
 		filter (isAutomorphism letter) allPermutations
 		where
-			ats = Set.toList (atoms letter)
+			ats = Set.toList (letterAtoms letter)
 			allPermutations =
 				map 
 					(\perm -> PermutationGroup.fromPairs (zip ats perm)) 
@@ -69,7 +69,7 @@ module Letter where
 					
 	letterRelations :: Letter -> Map [[Atom]] (Arity, Set (Tuple (Int, Permutation Int)))
 	letterRelations letter =
-		relationsFromAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
+		relationsFromAutomorphisms (Set.toList (letterAtoms letter)) (letterAutomorphisms letter)
 					
 	relationsFromAutomorphisms 
 		:: [Atom] 

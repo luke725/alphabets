@@ -1,21 +1,14 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module AC2001 (ac2001, ac2001SingleChange, ACStore, Last, emptyLast) where
-	import Data.Set (Set)
 	import qualified Data.Set as Set
-	import Data.Map (Map, (!))
+	import Data.Map (Map)
 	import qualified Data.Map as Map
-	import qualified Data.List as List
 	import Control.Monad
 	import Control.Monad.State
 	import Control.Conditional
 	
-	import Debug.Trace
-	
 	import ConstraintNetwork
-	import RelationalStructure
 	import PossibleSolutions (PossibleSolutions)
 	import qualified PossibleSolutions as PS
 	

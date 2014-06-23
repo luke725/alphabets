@@ -1,10 +1,7 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data where
---	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))	
-
 	import Letter
 	import AlphabetCSP
 	

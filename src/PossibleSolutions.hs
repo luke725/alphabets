@@ -1,7 +1,5 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module PossibleSolutions where
 	import Prelude hiding (map)
 	import qualified Data.List as List

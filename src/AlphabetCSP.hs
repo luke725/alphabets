@@ -7,11 +7,9 @@ module AlphabetCSP where
 	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
 	import qualified Data.Maybe as Maybe
-	import qualified Control.Monad as Monad
-	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
+	import Math.Algebra.Group.PermutationGroup(Permutation)
 	import qualified Math.Algebra.Group.PermutationGroup as PG
 	import qualified Math.Algebra.Group.SchreierSims as SS
-	import Debug.Trace
 
 	import RelationalStructure
 	import Letter
@@ -40,11 +38,10 @@ module AlphabetCSP where
 		else
 			Set.fromList (map eltArity (Set.findMin ts))
 	
-
+	
 	findMajorityLetter :: Letter -> Maybe (Map (Tuple Element) Element)
 	findMajorityLetter letter =	
-		findMajorityAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
-		
+		findMajorityAutomorphisms (Set.toList (letterAtoms letter)) (letterAutomorphisms letter)
 
 	checkMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Bool
 	checkMajorityAutomorphisms atoms automorphisms = (findMajorityAutomorphisms atoms automorphisms /= Nothing)
@@ -190,6 +187,7 @@ module AlphabetCSP where
 		where
 			mapMap (CSPElem v, CSPElem d) = Just (v, d)
 			mapMap (CSPTuple _, CSPTuple _) = Nothing
+			mapMap (_, _) = error ("Unexpected pattern in findAlphMajority")
 			
 			(cn, backV, backD) = translate (fromCSP tstr str)
 			elts = elementsFromRels rels
@@ -203,20 +201,16 @@ module AlphabetCSP where
 			tstr =
 				resetElements 
 				$ foldl 
-					(\tstr e@(ar, _) -> 
+					(\tstr' e@(ar, _) -> 
 						addToRelation 
 							(Right e) 1
 							[[[e, e]]]
 						$ addToRelation
 							(Right (one ar)) 1
 							[[[e, one ar]], [[one ar, e]]] 
-							tstr
+							tstr'
 					) 
 					(structPower str 2) 
 					(Set.toList elts)
-					
---	checkHomomorphism :: [Relation RName Element] -> Map (Tuple Element) Element -> Bool
 
---		where
-			
 

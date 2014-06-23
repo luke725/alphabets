@@ -1,7 +1,5 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module ConstraintNetwork where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
@@ -50,7 +48,7 @@ module ConstraintNetwork where
 			
 			elemsD = Set.toList $ Set.fromList (elemsDcm ++ elemsDdm)
 			elemsDdm = Set.toList $ Set.unions $ Map.elems $ domainMap cn	
-			elemsDcm = Set.toList $ Map.fold (\ds s -> Set.fold (\(d1, d2) s -> Set.insert d1 $ Set.insert d2 s) s ds) Set.empty $ constraintMap cn
+			elemsDcm = Set.toList $ Map.fold (\ds s -> Set.fold (\(d1, d2) s' -> Set.insert d1 $ Set.insert d2 s') s ds) Set.empty $ constraintMap cn
 			
 			mapV = Map.fromList $ zip elemsV [1..length elemsV]
 			mapD = Map.fromList $ zip elemsD [1..length elemsV]
@@ -108,15 +106,13 @@ module ConstraintNetwork where
 	 
 	fromCSP :: forall rname v d. (Ord rname, Ord d, Ord v) => Structure rname v -> Structure rname d -> ConstraintNetwork (CSPType v) (CSPType d)
 	fromCSP (sig, eltsV, relMapV) (_, eltsD, relMapD) =
-		create coreElems domainMap constraintMap
+		create coreElems' domainMap' constraintMap'
 		where
 			nonUnaryRels = 
 				map (\(rname, _) -> rname) $ filter (\(_, ar) -> ar > 1) (Map.toList sig)
 				
 			unaryRels =
 				map (\(rname, _) -> rname) $ filter (\(_, ar) -> ar == 1) (Map.toList sig)
-				
-			tuples (_, _, ts) = ts
 			
 			buildRestList :: Set a -> Set b -> [(a, Set b)]
 			buildRestList sa sb =
@@ -152,10 +148,10 @@ module ConstraintNetwork where
 			domainTuplesList =
 				concatMap relRestList nonUnaryRels
 				
-			coreElems = 
+			coreElems' = 
 				Set.fromList $ map (\(v, _) -> CSPElem v) domainEltsList
 				
-			domainMap =
+			domainMap' =
 				mapFromRestList
 					(map (\(x, s) -> (CSPElem x, Set.map CSPElem s)) domainEltsList 
 					 ++ map (\(x, s) -> (CSPTuple x, Set.map CSPTuple s)) domainTuplesList)
@@ -164,7 +160,6 @@ module ConstraintNetwork where
 			constraintsFromRel rname =
 				concatMap (\i -> buildRestList (tupleRel i tsV) (tupleRel i tsD)) [0..arity-1]
 				where
-					domList = relRestList rname
 					arity = sig!rname
 					(_, _, tsV) = relMapV ! rname
 					(_, _, tsD) = relMapD ! rname
@@ -172,7 +167,7 @@ module ConstraintNetwork where
 					tupleRel i ts =
 						Set.map (\t -> (CSPElem (t !! i), CSPTuple t)) ts
 						
-			constraintMap = 
+			constraintMap' = 
 				mapFromRestList
 					(concatMap constraintsFromRel nonUnaryRels)	
 	

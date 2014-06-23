@@ -1,7 +1,5 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module Utils where
 	import Debug.Trace
 	import Data.Set (Set)
@@ -30,10 +28,10 @@ module Utils where
 		where
 			empty = Set.fromList [[]]
 			set' = Set.map (\a -> [a]) set
-			cartesianPower' set' i tail =
-				if i <= 0
-				then tail
-				else cartesianPower' set' (i-1) (cartesian set' tail)
+			cartesianPower' set'' j tl =
+				if j <= 0
+				then tl
+				else cartesianPower' set'' (j-1) (cartesian set'' tl)
 				
 	allPartitions :: [a] -> [[[a]]]
 	allPartitions l =
@@ -67,18 +65,18 @@ module Utils where
 		concatMap (\(as, a) -> map (\(b, c) -> (b, c, a)) (sq as)) (zz [] l)
 		where
 			zz _ [] = []
-			zz l (h:t) =
-				(h:l, h):zz (h:l) t
-			sq l =
-				concatMap (\x -> map (\y -> (x, y)) l) l	
+			zz l' (h:t) =
+				(h:l', h):zz (h:l') t
+			sq l' =
+				concatMap (\x -> map (\y -> (x, y)) l') l'	
 	
 	square :: [a] -> [(a, a)]
 	square l = 
 		concatMap (\(as, a) -> map (\b -> (b, a)) as) (zz [] l)
 		where
 			zz _ [] = []
-			zz l (h:t) =
-				(h:l, h):zz (h:l) t
+			zz l' (h:t) =
+				(h:l', h):zz (h:l') t
 				
 	removeDup :: (Ord a, Ord b) => Map a b -> Map a b
 	removeDup m =

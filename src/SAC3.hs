@@ -1,25 +1,19 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module SAC3 where
+	import Prelude hiding (last)
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
-	import qualified Data.List as List
 	import qualified Data.Maybe as Maybe
-	import Control.Monad
 	import Control.Monad.State
-	import Control.Conditional
 	
 	import ConstraintNetwork
-	import RelationalStructure
 	import AC2001
 	import PossibleSolutions (PossibleSolutions)
 	import qualified PossibleSolutions as PS
 	
-	import Debug.Trace
 	
 	data Store v d = 
 		Store
@@ -61,10 +55,10 @@ module SAC3 where
 	
 	withSingletonDom :: (Ord v) => v -> d -> State (Store v d) a -> State (Store v d) a
 	withSingletonDom v d m = do
-		dom <- getDom
-		setDom (PS.setValue v d dom)
+		dom' <- getDom
+		setDom (PS.setValue v d dom')
 		a <- m
-		setDom dom
+		setDom dom'
 		return a
 		
 	pickAndDel :: (Ord v, Ord d) => State (Store v d) (Maybe (v, d))
@@ -104,10 +98,10 @@ module SAC3 where
 		st <- get
 		let qsac' =
 			foldl 
-				(\qsac' (v, d) -> 
-					if Map.member v qsac' 
-					then Map.insert v (Set.delete d (qsac' ! v)) qsac' 
-					else qsac'
+				(\qsac'' (v, d) -> 
+					if Map.member v qsac'' 
+					then Map.insert v (Set.delete d (qsac'' ! v)) qsac''
+					else qsac''
 				) 
 				(qsac st)
 			$ map (\(v, ds) -> (v, Set.findMin ds)) 
@@ -128,17 +122,17 @@ module SAC3 where
 		case pd of
 			Nothing -> return CheckedAll
 			Just (v, d) -> do
-				dom <- getDom
+				dom' <- getDom
 				last <- getLast
-				let (dom', last') = ac2001SingleChange cn v last (PS.setValue v d dom)
-				if PS.notEmpty dom'
-				then withACStore (dom', last') buildBranch'
+				let (dom'', last') = ac2001SingleChange cn v last (PS.setValue v d dom')
+				if PS.notEmpty dom''
+				then withACStore (dom'', last') buildBranch'
 				else do
-					let (dom'', last'') = 
-						ac2001SingleChange cn v last (PS.removeFromDomain v d dom)
-					setDom dom''
+					let (dom''', last'') = 
+						ac2001SingleChange cn v last (PS.removeFromDomain v d dom')
+					setDom dom'''
 					setLast last''
-					if PS.notEmpty dom''
+					if PS.notEmpty dom'''
 					then return StillRemain
 					else return CheckedAll
 		where
@@ -146,20 +140,20 @@ module SAC3 where
 				pd <- pickAndDel
 				case pd of
 					Nothing -> do
-						dom <- getDom
-						if PS.isUnique dom
+						dom' <- getDom
+						if PS.isUnique dom'
 						then
-							return $ Finished $ PS.anySolution dom
+							return $ Finished $ PS.anySolution dom'
 						else do
 							removeSingletons
 							return StillRemain
 					Just (v, d) -> do
-						dom <- getDom
+						dom' <- getDom
 						last <- getLast
-						let (dom', last') = 
-							ac2001SingleChange cn v last (PS.setValue v d dom)
-						if PS.notEmpty dom'
-						then withACStore (dom', last') buildBranch'
+						let (dom'', last') = 
+							ac2001SingleChange cn v last (PS.setValue v d dom')
+						if PS.notEmpty dom''
+						then withACStore (dom'', last') buildBranch'
 						else do
 							addToQsac v d
 							removeSingletons
@@ -209,28 +203,28 @@ module SAC3 where
 	findSAC3Solution cn =
 		findSol (sac3' cn (ac2001 cn emptyLast (PS.fromMap $ domainMap cn)))
 		where
-			findSol (dom, last) =
-				if not $ PS.notEmpty dom
+			findSol (dom', last) =
+				if not $ PS.notEmpty dom'
 				then Nothing
 				else
 					case 
 						Maybe.listToMaybe 
 						$ filter (\(_, ds) -> Set.size ds > 1)
 						$ filter (\(v, _) -> Set.member v (coreElems cn))
-						$ Map.toList $ PS.toMap dom
+						$ Map.toList $ PS.toMap dom'
 					of
 						Nothing -> 
 							Just
 							$ Map.filterWithKey (\v _ -> Set.member v (coreElems cn)) 
-							$ PS.anySolution dom
+							$ PS.anySolution dom'
 						Just (v, ds) -> 
 							case 
 								Maybe.listToMaybe 
 								$ filter (\(s, _) -> PS.notEmpty s)
-								$ map (\d -> sac3' cn (ac2001 cn last (PS.setValue v d dom)))
+								$ map (\d -> sac3' cn (ac2001 cn last (PS.setValue v d dom')))
 								$ Set.toList ds
 							of
-							Just (dom', last') -> findSol (dom', last')
+							Just (dom'', last') -> findSol (dom'', last')
 							Nothing   -> Nothing
 						
 
