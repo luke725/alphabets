@@ -1,7 +1,5 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-{-# LANGUAGE ScopedTypeVariables #-}
-
 module AlphabetCSP where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
