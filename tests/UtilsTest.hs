@@ -12,11 +12,16 @@ module UtilsTest (tests) where
 	
 	import Utils
 	
+	instance Arbitrary Arity where
+		arbitrary = QC.elements [Arity 0,Arity 1,Arity 2,Arity 3,Arity 4]
+		shrink _  = []
+		
+	instance CoArbitrary a => CoArbitrary (Tuple a) where
+		coarbitrary (Tuple t) = coarbitrary t
+	
 	tests :: TestTree
 	tests = testGroup "Utils" [testCartesianPowerLength]
-	
+		
 	testCartesianPowerLength = 
 		QC.testProperty "cartesian power length"
-		$ QC.forAll (QC.elements [0,1,2,3,4])
-		$ (\ar set -> Set.size set < 20 QC.==> Set.null $ Set.filter (\t -> arity t /= Arity ar) $ cartesianPower (set :: Set Int) ar)
-		
+		$ (\(Arity ar) set -> Set.size set < 20 QC.==> Set.null $ Set.filter (\t -> arity t /= Arity ar) $ cartesianPower (set :: Set Int) ar)
