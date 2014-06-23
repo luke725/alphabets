@@ -31,14 +31,16 @@ module ConstraintNetwork where
 		++ show (List.length $ Map.keys $ constraintMap cn)  
 		++ ",nbs: " ++ show (sum $ map Set.size $ Map.elems $ constraintMap cn)
 		
-	translate :: (Ord v, Ord d) => ConstraintNetwork v d -> ConstraintNetwork Int Int
+	translate :: (Ord v, Ord d) => ConstraintNetwork v d -> (ConstraintNetwork Int Int, Map Int v, Map Int d)
 	translate cn =
-		ConstraintNetwork 
+		(ConstraintNetwork 
 			{ coreElems = coreElems'
 			, domainMap = domainMap'
 			, constraintMap = constraintMap'
 			, neighborsMap = neighborsMap'
-			}
+			},
+		 Map.fromList $ zip [1..length elemsV] elemsV,
+		 Map.fromList $ zip [1..length elemsD] elemsD)
 		where
 			elemsV = Set.toList $ Set.fromList (elemsVcm ++ elemsVce ++ elemsVdm ++ elemsVnm)
 			elemsVcm = concatMap (\(v1, v2) -> [v1, v2]) $ Map.keys $ constraintMap cn 

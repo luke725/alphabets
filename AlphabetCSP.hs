@@ -6,7 +6,7 @@ module AlphabetCSP where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
-	import Data.Map (Map)
+	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
 	import qualified Data.Maybe as Maybe
 	import qualified Control.Monad as Monad
@@ -43,15 +43,25 @@ module AlphabetCSP where
 			Set.fromList (map eltArity (Set.findMin ts))
 	
 
-	checkMajorityLetter :: Letter -> Bool
-	checkMajorityLetter letter =	
-		checkMajorityAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
+	findMajorityLetter :: Letter -> Maybe (Map (Tuple Element) Element)
+	findMajorityLetter letter =	
+		findMajorityAutomorphisms (Set.toList (atoms letter)) (letterAutomorphisms letter)
 		
 
 	checkMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Bool
-	checkMajorityAutomorphisms atoms automorphisms =
-		checkAlphMajority rels' && checkAlphMajority rels''
+	checkMajorityAutomorphisms atoms automorphisms = (findMajorityAutomorphisms atoms automorphisms /= Nothing)
+
+	findMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Maybe (Map (Tuple Element) Element)
+	findMajorityAutomorphisms atoms automorphisms =
+		case mm' of
+		 	Just m' ->
+		 		case mm'' of
+		 			Just m'' -> Just (Map.union m' m'')
+		 			Nothing -> Nothing 
+		 	Nothing -> Nothing
 		where
+			mm' = findAlphMajority rels'
+			mm'' = findAlphMajority rels''		
 			maxAr = List.length atoms
 			rels = 
 				map 
@@ -90,13 +100,20 @@ module AlphabetCSP where
 			n = List.length ggList
 			ggList = List.nub (concat $ concat gg)
 					
-	checkMajorityGG :: GroupGens -> Bool
-	checkMajorityGG gg = checkMajorityAutomorphisms (ggAtoms gg) (ggElements gg)
+	findMajorityGG :: GroupGens -> Maybe (Map (Tuple Element) Element)
+	findMajorityGG gg = findMajorityAutomorphisms (ggAtoms gg) (ggElements gg)
 	
-	checkMajorityGGMany :: [GroupGens] -> Bool
-	checkMajorityGGMany ggList =
-		checkAlphMajority rels' && checkAlphMajority rels''
+	findMajorityGGMany :: [GroupGens] -> Maybe (Map (Tuple Element) Element)
+	findMajorityGGMany ggList =
+		 case mm' of
+		 	Just m' ->
+		 		case mm'' of
+		 			Just m'' -> Just (Map.union m' m'')
+		 			Nothing -> Nothing 
+		 	Nothing -> Nothing
 		where
+			mm' = findAlphMajority rels'
+			mm'' = findAlphMajority rels''
 			maxAr :: Int = List.maximum $ map (\gg -> List.length (ggAtoms gg)) ggList
 			rels =
 				map (\(k, (ar, s)) -> (k, ar, s)) 
@@ -124,12 +141,21 @@ module AlphabetCSP where
 								(eltArities r))
 					)
 					rels
-	
-					
+
 	checkMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Bool
-	checkMajorityAutomorphismsMany atoms automorphismsList =
-		checkAlphMajority rels' && checkAlphMajority rels''
+	checkMajorityAutomorphismsMany atoms automorphismsList = (findMajorityAutomorphismsMany atoms automorphismsList /= Nothing)
+					
+	findMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Maybe (Map (Tuple Element) Element)
+	findMajorityAutomorphismsMany atoms automorphismsList =
+		 case mm' of
+		 	Just m' ->
+		 		case mm'' of
+		 			Just m'' -> Just (Map.union m' m'')
+		 			Nothing -> Nothing 
+		 	Nothing -> Nothing
 		where
+			mm' = findAlphMajority rels'
+			mm'' = findAlphMajority rels''
 			maxAr = List.length atoms
 			rels =
 				map (\(k, (ar, s)) -> (k, ar, s)) 
@@ -158,11 +184,16 @@ module AlphabetCSP where
 					)
 					rels
 
-	checkAlphMajority :: [Relation RName Element] -> Bool
-	checkAlphMajority rels =
-		(findSAC3Solution cn /= Nothing)
+	findAlphMajority :: [Relation RName Element] -> Maybe (Map (Tuple Element) Element)
+	findAlphMajority rels =
+		case findSAC3Solution cn of
+			Just m' -> Just (Map.fromList $ Maybe.catMaybes $ map mapMap $ map (\(v', d') -> (backV ! v', backD ! d')) $ Map.toList m')
+			Nothing -> Nothing
 		where
-			cn = translate (fromCSP tstr str)
+			mapMap (CSPElem v, CSPElem d) = Just (v, d)
+			mapMap (CSPTuple _, CSPTuple _) = Nothing
+			
+			(cn, backV, backD) = translate (fromCSP tstr str)
 			elts = elementsFromRels rels
 			
 			rels' = rels ++ map (\e -> (Right e, 1, Set.singleton [e])) (Set.toList elts)
@@ -185,4 +216,9 @@ module AlphabetCSP where
 					) 
 					(structPower str 2) 
 					(Set.toList elts)
+					
+--	checkHomomorphism :: [Relation RName Element] -> Map (Tuple Element) Element -> Bool
+
+--		where
+			
 
