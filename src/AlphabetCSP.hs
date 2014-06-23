@@ -17,7 +17,7 @@ module AlphabetCSP where
 	import ConstraintNetwork
 	import Utils
 	
-	type Element = (Arity, Permutation Int)
+	type Element = (Int, Permutation Int)
 
 	type RName = (Either ([Permutation Atom], [[Atom]]) Element)
 
@@ -25,18 +25,20 @@ module AlphabetCSP where
 	
 	type GroupGens = [[[Atom]]]
 
-	one :: Arity -> Element
+	one :: Int -> Element
 	one r = (r, PG.p [])
 	
 	eltArity :: Element -> Int
 	eltArity (ar, _) = ar
 	
-	eltArities :: Relation RName Element -> Set Arity
-	eltArities (_, _, ts) = 
+	eltArities :: Relation RName Element -> Set Int
+	eltArities (Relation (_, _, ts)) = 
 		if Set.null ts
 		then Set.empty
 		else
-			Set.fromList (map eltArity (Set.findMin ts))
+			Set.fromList (map eltArity t)
+		where
+			Tuple t = Set.findMin ts
 	
 	
 	findMajorityLetter :: Letter -> Maybe (Map (Tuple Element) Element)
@@ -59,8 +61,8 @@ module AlphabetCSP where
 			mm'' = findAlphMajority rels''		
 			maxAr = List.length atoms
 			rels = 
-				map 
-					(\(as, (ar, s)) -> (Left (automorphisms, as), ar, s)) 
+				map
+					(\(as, (ar, s)) -> Relation (Left (automorphisms, as), ar, s)) 
 					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
 			rels' =
 				filter 
@@ -111,7 +113,7 @@ module AlphabetCSP where
 			mm'' = findAlphMajority rels''
 			maxAr :: Int = List.maximum $ map (\gg -> List.length (ggAtoms gg)) ggList
 			rels =
-				map (\(k, (ar, s)) -> (k, ar, s)) 
+				map (\(k, (ar, s)) -> Relation (k, ar, s)) 
 				$ Map.toList
 				$ removeDup
 				$ Map.unions
@@ -153,7 +155,7 @@ module AlphabetCSP where
 			mm'' = findAlphMajority rels''
 			maxAr = List.length atoms
 			rels =
-				map (\(k, (ar, s)) -> (k, ar, s)) 
+				map (\(k, (ar, s)) -> Relation (k, ar, s)) 
 				$ Map.toList
 				$ removeDup
 				$ Map.unions
@@ -192,7 +194,7 @@ module AlphabetCSP where
 			(cn, backV, backD) = translate (fromCSP tstr str)
 			elts = elementsFromRels rels
 			
-			rels' = rels ++ map (\e -> (Right e, 1, Set.singleton [e])) (Set.toList elts)
+			rels' = rels ++ map (\e -> Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts)
 			
 			str :: Structure RName Element
 			str = createStructure (sigFromRels rels') elts rels'
@@ -203,11 +205,11 @@ module AlphabetCSP where
 				$ foldl 
 					(\tstr' e@(ar, _) -> 
 						addToRelation 
-							(Right e) 1
-							[[[e, e]]]
+							(Right e) (Arity 1)
+							[Tuple [Tuple [e, e]]]
 						$ addToRelation
-							(Right (one ar)) 1
-							[[[e, one ar]], [[one ar, e]]] 
+							(Right (one ar)) (Arity 1)
+							[Tuple [Tuple [e, one ar]], Tuple [Tuple [one ar, e]]] 
 							tstr'
 					) 
 					(structPower str 2) 

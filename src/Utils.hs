@@ -8,8 +8,16 @@ module Utils where
 	import qualified Data.Map as Map
 	import qualified Data.List as List
 	import qualified Control.Monad as Monad
+
+	newtype Arity = Arity Int deriving (Show, Eq, Ord)	
 	
-	type Tuple element = [element]
+	newtype Tuple element = Tuple [element] deriving (Show, Eq, Ord)
+	
+	arity :: Tuple a -> Arity
+	arity (Tuple t) = Arity (length t)
+	
+	mapTuple :: (a -> b) -> Tuple a -> Tuple b
+	mapTuple f (Tuple t) = Tuple (map f t)
 
 	filterToMaybe :: (a -> Bool) -> a -> Maybe a
 	filterToMaybe f a =
@@ -19,15 +27,15 @@ module Utils where
 
 	cartesian :: (Ord a) => Set (Tuple a) -> Set (Tuple a) -> Set (Tuple a)
 	cartesian set1 set2 =
-		Set.unions (map (\t1 -> Set.map (\t2 -> t1 ++ t2) set2) (Set.toList set1))
+		Set.unions (map (\(Tuple t1) -> Set.map (\(Tuple t2) -> Tuple (t1 ++ t2)) set2) (Set.toList set1))
 	
 		
 	cartesianPower :: (Ord a) => Set a -> Int -> Set (Tuple a)
 	cartesianPower set i = 
 		cartesianPower' set' i empty
 		where
-			empty = Set.fromList [[]]
-			set' = Set.map (\a -> [a]) set
+			empty = Set.fromList [Tuple []]
+			set' = Set.map (\a -> Tuple [a]) set
 			cartesianPower' set'' j tl =
 				if j <= 0
 				then tl

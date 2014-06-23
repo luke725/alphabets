@@ -9,8 +9,7 @@ module Letter where
 	import qualified Data.Maybe as Maybe
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PermutationGroup
-
-	import RelationalStructure (Arity)
+	
 	import Utils
 	
 	type Atom = Int
@@ -55,7 +54,7 @@ module Letter where
 	translateAutomorphism :: [[Atom]] -> Permutation Atom -> Maybe (Tuple (Int, Permutation Int))
 	translateAutomorphism part f = 
 		case allJust (map permute part) of
-			Just t  -> Just (filter (\(ar, _) -> ar > 1) t)
+			Just t  -> Just $ Tuple $ filter (\(i, _) -> i > 1) t
 			Nothing -> Nothing
 		where
 			permute :: [Atom] -> Maybe (Int, Permutation Int)
@@ -82,7 +81,7 @@ module Letter where
 		$ map
 			(\part -> 
 				(part, 
-				(length $ filter (\l -> length l > 1) part,
+				(Arity $ length $ filter (\l -> length l > 1) part,
 				 Set.fromList (Maybe.mapMaybe (translateAutomorphism part) automorphisms)))
 			)
 			partitions

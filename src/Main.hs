@@ -87,7 +87,7 @@ allTogether args = do
 	case b of 
 		Nothing -> putStrLn "Nothing"
 		Just m ->
-			Monad.foldM (\() ([x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)
+			Monad.foldM (\() (Tuple [x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)
 
 all5 :: [String] -> IO ()	
 all5 _ = do
@@ -95,7 +95,7 @@ all5 _ = do
 	case b of 
 		Nothing -> putStrLn "Nothing"
 		Just m ->
-			Monad.foldM (\() ([x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)	
+			Monad.foldM (\() (Tuple [x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)	
 	
 	
 runPart :: [String] -> IO ()	

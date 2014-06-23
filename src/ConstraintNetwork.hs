@@ -105,14 +105,14 @@ module ConstraintNetwork where
 		
 	 
 	fromCSP :: forall rname v d. (Ord rname, Ord d, Ord v) => Structure rname v -> Structure rname d -> ConstraintNetwork (CSPType v) (CSPType d)
-	fromCSP (sig, eltsV, relMapV) (_, eltsD, relMapD) =
+	fromCSP (Structure (Signature sigMap, eltsV, relMapV)) (Structure (_, eltsD, relMapD)) =
 		create coreElems' domainMap' constraintMap'
 		where
 			nonUnaryRels = 
-				map (\(rname, _) -> rname) $ filter (\(_, ar) -> ar > 1) (Map.toList sig)
+				map (\(rname, _) -> rname) $ filter (\(_, Arity ar) -> ar > 1) (Map.toList sigMap)
 				
 			unaryRels =
-				map (\(rname, _) -> rname) $ filter (\(_, ar) -> ar == 1) (Map.toList sig)
+				map (\(rname, _) -> rname) $ filter (\(_, Arity ar) -> ar == 1) (Map.toList sigMap)
 			
 			buildRestList :: Set a -> Set b -> [(a, Set b)]
 			buildRestList sa sb =
@@ -128,17 +128,17 @@ module ConstraintNetwork where
 			unaryRelRestList rname =
 				buildRestList elsV elsD
 				where
-					(_, _, tsV) = relMapV ! rname
-					(_, _, tsD) = relMapD ! rname
-					elsV = Set.map (\[v] -> v) tsV
-					elsD = Set.map (\[d] -> d) tsD
+					Relation (_, _, tsV) = relMapV ! rname
+					Relation (_, _, tsD) = relMapD ! rname
+					elsV = Set.map (\(Tuple [v]) -> v) tsV
+					elsD = Set.map (\(Tuple [d]) -> d) tsD
 					
 			relRestList :: rname -> [(Tuple v, Set (Tuple d))]
 			relRestList rname =
 				buildRestList tsV tsD
 				where
-					(_, _, tsV) = relMapV ! rname
-					(_, _, tsD) = relMapD ! rname
+					Relation (_, _, tsV) = relMapV ! rname
+					Relation (_, _, tsD) = relMapD ! rname
 							
 				
 			domainEltsList =
@@ -158,14 +158,14 @@ module ConstraintNetwork where
 					 
 			constraintsFromRel :: rname -> [((CSPType v, CSPType v), Set (CSPType d, CSPType d))]
 			constraintsFromRel rname =
-				concatMap (\i -> buildRestList (tupleRel i tsV) (tupleRel i tsD)) [0..arity-1]
+				concatMap (\i -> buildRestList (tupleRel i tsV) (tupleRel i tsD)) [0..ar-1]
 				where
-					arity = sig!rname
-					(_, _, tsV) = relMapV ! rname
-					(_, _, tsD) = relMapD ! rname
+					Arity ar = sigMap!rname
+					Relation (_, _, tsV) = relMapV ! rname
+					Relation (_, _, tsD) = relMapD ! rname
 					
 					tupleRel i ts =
-						Set.map (\t -> (CSPElem (t !! i), CSPTuple t)) ts
+						Set.map (\(Tuple t) -> (CSPElem (t !! i), CSPTuple (Tuple t))) ts
 						
 			constraintMap' = 
 				mapFromRestList
