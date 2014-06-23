@@ -86,13 +86,25 @@ triples _ = do
 	putStrLn $ show $ Maybe.listToMaybe negRes
 	
 allTogether args = do
-	let n = 8
+	let n = 7
 	let k = read (head args)
-	rs <- results8
+	rs <- results7
 	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
-	let b = checkMajorityGGMany standard
-	putStrLn (show b)
+	let b = findMajorityGGMany standard
+	case b of 
+		Nothing -> putStrLn "Nothing"
+		Just m ->
+			Monad.foldM (\() ([x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)
+
+all5 _ = do
+	let b = findMajorityGGMany s5
+	case b of 
+		Nothing -> putStrLn "Nothing"
+		Just m ->
+			Monad.foldM (\() ([x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)	
+	
+	
 	
 runPart args = do
 	let n = 8
@@ -110,4 +122,5 @@ main = do
 		"pairs" -> pairs (tail args)
 		"triples" -> triples (tail args)
 		"all" -> allTogether (tail args)
+		"all5" -> all5 (tail args)
 
