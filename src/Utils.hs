@@ -70,24 +70,6 @@ module Utils where
 	showRes res = 
 		trace (show res) res
 		
-	
-	cube :: [a] -> [(a, a, a)]
-	cube l =
-		concatMap (\(as, a) -> map (\(b, c) -> (b, c, a)) (sq as)) (zz [] l)
-		where
-			zz _ [] = []
-			zz l' (h:t) =
-				(h:l', h):zz (h:l') t
-			sq l' =
-				concatMap (\x -> map (\y -> (x, y)) l') l'	
-	
-	square :: [a] -> [(a, a)]
-	square l = 
-		concatMap (\(as, a) -> map (\b -> (b, a)) as) (zz [] l)
-		where
-			zz _ [] = []
-			zz l' (h:t) =
-				(h:l', h):zz (h:l') t
 				
 	removeDup :: (Ord a, Ord b) => Map a b -> Map a b
 	removeDup m =
