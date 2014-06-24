@@ -9,6 +9,8 @@ module UtilsTest (tests) where
 	
 	import Data.Set(Set)
 	import qualified Data.Set as Set
+	import Data.Map(Map)
+	import qualified Data.Map as Map
 	
 	import Utils
 	
@@ -20,8 +22,34 @@ module UtilsTest (tests) where
 		coarbitrary (Tuple t) = coarbitrary t
 	
 	tests :: TestTree
-	tests = testGroup "Utils" [testCartesianPowerLength]
+	tests = testGroup "Utils" [testCartesianPowerLength, testRemoveDupOne, testRemoveDupDouble, testPartitionsConcat, testPartitionsSimple]
 		
 	testCartesianPowerLength = 
 		QC.testProperty "cartesian power length"
 		$ (\(Arity ar) set -> Set.size set < 20 QC.==> Set.null $ Set.filter (\t -> arity t /= Arity ar) $ cartesianPower (set :: Set Int) ar)
+		
+	testRemoveDupOne = 
+		QC.testProperty "removeDup for one"
+		$ (\(keys :: [Int]) (val :: Char) ->
+			length keys > 0 QC.==> 
+			let m = removeDup $ Map.fromList $ map (\k -> (k, val)) keys 
+			in Map.size m == 1 && Map.elems m == [val]
+		)
+		
+	testRemoveDupDouble =
+		QC.testProperty "removeDup for doubled"
+		$ (\(m :: Map Int Char) -> 
+			let m' = removeDup $ Map.union (Map.mapKeys Left m) (Map.mapKeys Right m) 
+			in Map.size m' == Map.size (removeDup m) && Set.fromList (Map.elems m') == Set.fromList (Map.elems $ removeDup m)
+		)
+		
+	testPartitionsConcat =
+		QC.testProperty "allPartitions and concat"
+		$ (\(l :: [Int]) ->
+			length l < 7 QC.==> all (\p -> l == concat p) (allPartitions l)
+		)
+		
+	testPartitionsSimple =
+		testCase "example for allPartitions"
+		$ Set.fromList (allPartitions [1,2,3]) @?= Set.fromList [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]]
+		

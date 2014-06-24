@@ -41,6 +41,9 @@ module Utils where
 				then tl
 				else cartesianPower' set'' (j-1) (cartesian set'' tl)
 				
+	-- all possible partitions of a list
+	-- for example
+	-- allPartitions [1,2,3] = [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]] up to order
 	allPartitions :: [a] -> [[[a]]]
 	allPartitions l =
 		allPartitions' l [] []
