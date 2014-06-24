@@ -41,6 +41,7 @@ module Utils where
 				then tl
 				else cartesianPower' set'' (j-1) (cartesian set'' tl)
 				
+				
 	-- all possible partitions of a list
 	-- for example
 	-- allPartitions [1,2,3] = [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]] up to order
@@ -56,21 +57,25 @@ module Utils where
 				allPartitions' t (h:ha:ta) sol
 				++ allPartitions' (h:t) [] (reverse (ha:ta) : sol)
 
+
 	allPermPart :: (Ord a) => [a] -> Set ([[a]])
 	allPermPart l =
 		Set.fromList 
 			(concatMap 
 				(\p -> map List.sort (allPartitions p)) 
 				(List.permutations l))
+
 				
 	allJust :: [Maybe a] -> Maybe [a]
 	allJust = Monad.sequence
 	
+	
 	showRes :: (Show a) => a -> a
 	showRes res = 
 		trace (show res) res
+
 		
-				
+	-- remove duplicate elements
 	removeDup :: (Ord a, Ord b) => Map a b -> Map a b
 	removeDup m =
 		Map.fromList 

@@ -48,5 +48,3 @@ module PossibleSolutions where
 	anySolution :: PossibleSolutions a b -> Map a b
 	anySolution (PossibleSolutions m) = Map.map Set.findMin m
 
-	
-

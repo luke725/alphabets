@@ -9,15 +9,19 @@ module RelationalStructure where
 
 	import Utils
 	
+	
 	newtype Signature rname = Signature (Map rname Arity) deriving (Show, Eq, Ord)
+	
 	
 	newtype Relation rname element = 
 		Relation (rname, Arity, Set (Tuple element))
 		deriving (Show, Eq, Ord)
 	
+	
 	newtype Structure rname element = 
 		Structure (Signature rname, Set element, Map rname (Relation rname element))
 		deriving (Show, Eq, Ord)
+	
 	
 	stats :: Structure rname element -> String
 	stats (Structure (Signature sigMap, elems, _)) =
@@ -35,6 +39,7 @@ module RelationalStructure where
 	
 	relationArity :: (Ord rname) => Signature rname -> rname -> Arity
 	relationArity (Signature arMap) rname = arMap ! rname
+	
 	
 	containsRelation :: (Ord rname) => Signature rname -> rname -> Bool
 	containsRelation (Signature arMap) rname = (Map.lookup rname arMap /= Nothing)
@@ -56,14 +61,6 @@ module RelationalStructure where
 		Relation (rname, Arity ar, Set.filter fun tuples)
 		where
 			tuples = cartesianPower elts ar
-		
-			
-	checkRelation :: (Ord element) => Set element -> Relation rname element -> Bool
-	checkRelation elts (Relation (_, ar, tuples)) =
-		all check_tuple (Set.toList tuples)
-		where
-			check_tuple (Tuple t) =
-				(arity (Tuple t) == ar) && (all (\e -> Set.member e elts) t)
 	
 	
 	createStructure 
@@ -79,26 +76,16 @@ module RelationalStructure where
 			rel_map = 
 				Map.fromList 
 					(map (\(Relation (rname', arity', elts')) -> (rname', Relation (rname', arity', elts'))) rels)
-	
-	
-	checkStructure :: (Ord rname, Ord element) => Structure rname element -> Bool
-	checkStructure (Structure (Signature sigMap, elts, relMap)) =
-		(Map.keysSet sigMap == Map.keysSet relMap)
-		&& (all 
-				(\ (rname, Relation (rname', ar, tuples)) -> 
-					(ar == relationArity (Signature sigMap) rname) 
-					&& checkRelation elts (Relation (rname', ar, tuples))
-				) 
-			(Map.toList relMap))
 		
 		
-	strElements :: Structure rname element -> Set element
-	strElements (Structure (_, elts, _)) = elts
+	structureElems :: Structure rname element -> Set element
+	structureElems (Structure (_, elts, _)) = elts
+	
 	
 	signature :: Structure rname element -> Signature rname
 	signature (Structure (sig, _, _)) = sig
 		
-		
+				
 	expectRelation :: (Ord rname, Show rname) => Signature rname -> rname -> Arity -> a -> a
 	expectRelation (Signature sigMap) rname ar a =
 		case Map.lookup rname sigMap of
@@ -106,7 +93,7 @@ module RelationalStructure where
 				if ar == ar' 
 				then a 
 				else error ("Wrong arity of relation " ++ show rname)
-			Nothing -> error ("No such relation " ++ show rname)
+			Nothing -> error ("No such relation " ++ show rname)			
 			
 			
 	isInRelation 
@@ -201,6 +188,7 @@ module RelationalStructure where
 					(Relation (rname, ar, Set.fromList tuples))
 					rels
 	
+	
 	elementsFromRels :: (Ord element) => [Relation rname element] -> Set element
 	elementsFromRels rels =
 		Set.unions $ map
@@ -210,6 +198,7 @@ module RelationalStructure where
 	resetElements :: (Ord element, Ord rname) => Structure rname element -> Structure rname element
 	resetElements (Structure (sig, _, rels)) = 
 		Structure (sig, elementsFromRels (Map.elems rels), rels)
+	
 	
 	substructure 
 		:: (Ord element) 

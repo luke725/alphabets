@@ -9,6 +9,7 @@ module RelationalStructureTest (tests) where
 	
 	import Data.Set(Set)
 	import qualified Data.Set as Set
+	import qualified Data.Map as Map
 	import Debug.Trace
 	
 	import RelationalStructure
@@ -40,6 +41,25 @@ module RelationalStructureTest (tests) where
 	
 	
 	
+	checkRelation :: (Ord element) => Set element -> Relation rname element -> Bool
+	checkRelation elts (Relation (_, ar, tuples)) =
+		all check_tuple (Set.toList tuples)
+		where
+			check_tuple (Tuple t) =
+				(arity (Tuple t) == ar) && (all (\e -> Set.member e elts) t)
+				
+				
+	checkStructure :: (Ord rname, Ord element) => Structure rname element -> Bool
+	checkStructure (Structure (Signature sigMap, elts, relMap)) =
+		(Map.keysSet sigMap == Map.keysSet relMap)
+		&& (all 
+				(\ (rname, Relation (rname', ar, tuples)) -> 
+					(ar == relationArity (Signature sigMap) rname) 
+					&& checkRelation elts (Relation (rname', ar, tuples))
+				) 
+			(Map.toList relMap))
+				
+	
 	
 	tests :: TestTree
 	tests = testGroup "RelationalStructure" [testRelation, testStructure, testAutomorphism, testSubstructure, testPowerStructure]
@@ -54,13 +74,13 @@ module RelationalStructureTest (tests) where
 	testSubstructure = 
 		QC.testProperty "check automorphism" 
 			(\(fsub :: Int -> Bool) (str :: Structure Char Int) -> 
-				let substr = substructure str (Set.filter fsub $strElements str) 
+				let substr = substructure str (Set.filter fsub $ structureElems str) 
 				in isHomomorphism substr str id)
 				
 	testPowerStructure =
 		QC.testProperty "power structure" 
 			(\(str :: Structure Char Int) ->
-				Set.size (strElements str) < 5 QC.==>
+				Set.size (structureElems str) < 5 QC.==>
 				let p = structPower str 2 in
 				isHomomorphism p str (\(Tuple [e, _]) -> e)
 				&& isHomomorphism p str (\(Tuple [e, _]) -> e)
