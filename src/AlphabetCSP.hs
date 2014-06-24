@@ -89,8 +89,8 @@ module AlphabetCSP where
 	
 	ggAtoms :: GroupGens -> [Atom]
 	ggAtoms gg = 
-		if n < 4 then
-			ggList ++ [100..(103 - n)]
+		if n < 4 then -- TODO: fix it
+			ggList ++ (map Atom [100..(103 - n)]) 
 		else
 			ggList
 		where

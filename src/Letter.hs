@@ -12,7 +12,7 @@ module Letter where
 	
 	import Utils
 	
-	type Atom = Int
+	newtype Atom = Atom Int deriving (Show, Ord, Eq)
 	
 	data Letter = LSet (Set Letter) | LAtom Atom deriving (Show, Ord, Eq)
 	

@@ -30,7 +30,7 @@ myParMap f (a:as) = do
 run :: [String] -> IO ()
 run args = do
 	let n = read (List.head args)
-	putStrLn $ show $ runAll [1..n] (s !! (n-1))
+	putStrLn $ show $ runAll (map Atom [1..n]) (s !! (n-1))
 	
 	
 allTogether :: [String] -> IO ()	
@@ -60,7 +60,7 @@ runPart _ = do
 	let n = 8
 	rs <- results8
 	let done = map (\(w, _) -> w) rs
-	putStrLn $ show $ runAll [1..n] $ filter (\x -> not $ elem x done) $ (s !! (n-1))
+	putStrLn $ show $ runAll (map Atom [1..n]) $ filter (\x -> not $ elem x done) $ (s !! (n-1))
 
 	
 main :: IO ()
@@ -68,7 +68,7 @@ main = do
 	args <- getArgs
 	case head args of
 		"run" -> run (tail args)
-		"run1" -> putStrLn $ show $ run1 [[[1,2,3,4,5]],[[3,4,5]],[[6,7]]]
+		"run1" -> putStrLn $ show $ run1 $ getGroupGens [[[1,2,3,4,5]],[[3,4,5]],[[6,7]]]
 		"runPart" -> runPart (tail args)
 		"all" -> allTogether (tail args)
 		"all5" -> all5 (tail args)
