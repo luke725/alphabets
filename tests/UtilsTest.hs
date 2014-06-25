@@ -11,6 +11,7 @@ module UtilsTest (tests) where
 	import qualified Data.Set as Set
 	import Data.Map(Map)
 	import qualified Data.Map as Map
+	import qualified Data.List as List
 	
 	import Utils
 	
@@ -54,5 +55,5 @@ module UtilsTest (tests) where
 		
 	testPartitionsSimple =
 		testCase "example for allPartitions"
-		$ sort (allPartitions [1,2,3]) @?= sort [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]]
+		$ List.sort (allPartitions [1,2,3]) @?= List.sort [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]]
 		
