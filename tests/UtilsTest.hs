@@ -26,7 +26,10 @@ module UtilsTest (tests) where
 		
 	testCartesianPowerLength = 
 		QC.testProperty "cartesian power length"
-		$ (\(Arity ar) set -> Set.size set < 20 QC.==> Set.null $ Set.filter (\t -> arity t /= Arity ar) $ cartesianPower (set :: Set Int) ar)
+		$ (\(Arity ar) (set :: Set Int) -> 
+			Set.size set < 20 QC.==> 
+			Set.null $ Set.filter (\t -> arity t /= Arity ar) $ cartesianPower set ar
+		)
 		
 	testRemoveDupOne = 
 		QC.testProperty "removeDup for one"
@@ -51,5 +54,5 @@ module UtilsTest (tests) where
 		
 	testPartitionsSimple =
 		testCase "example for allPartitions"
-		$ Set.fromList (allPartitions [1,2,3]) @?= Set.fromList [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]]
+		$ sort (allPartitions [1,2,3]) @?= sort [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]]
 		

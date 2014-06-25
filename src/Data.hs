@@ -8,28 +8,28 @@ module Data where
 	getGroupGens :: [[[Int]]] -> GroupGens
 	getGroupGens = map (map (map Atom))
 	
-	classes6 :: IO [[GroupGens]]
-	classes6 = do
-		clf <- readFile "data6.txt"
+	classes6 :: String -> IO [[GroupGens]]
+	classes6 path = do
+		clf <- readFile (path ++ "/data6.txt")
 		let cl :: [[[[[Atom]]]]] = map (map getGroupGens) (read clf)
 		return cl
 
 		
-	results6 :: IO [(GroupGens, Bool)]
-	results6 = do
-		l <- readFile "all6.txt"
+	results6 :: String -> IO [(GroupGens, Bool)]
+	results6 path = do
+		l <- readFile (path ++ "/all6.txt")
 		let rs :: [([[[Atom]]], Bool)] = map (\(x, b) -> (getGroupGens x, b)) $ read l
 		return rs
 		
-	results7 :: IO [(GroupGens, Bool)]
-	results7 = do
-		l <- readFile "all7.txt"
+	results7 :: String -> IO [(GroupGens, Bool)]
+	results7 path = do
+		l <- readFile (path ++ "/all7.txt")
 		let rs :: [([[[Atom]]], Bool)] = map (\(x, b) -> (getGroupGens x, b)) $ read l
 		return rs
 		
-	results8 :: IO [(GroupGens, Bool)]
-	results8 = do
-		l <- readFile "all8.txt"
+	results8 :: String -> IO [(GroupGens, Bool)]
+	results8 path = do
+		l <- readFile (path ++ "/all8.txt")
 		let rs :: [([[[Atom]]], Bool)] = map (\(x, b) -> (getGroupGens x, b)) $ read l
 		return rs
 

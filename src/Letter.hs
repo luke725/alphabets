@@ -12,7 +12,10 @@ module Letter where
 	
 	import Utils
 	
-	newtype Atom = Atom Int deriving (Show, Ord, Eq)
+	newtype Atom = Atom Int deriving (Ord, Eq)
+	
+	instance Show Atom where
+		show (Atom a) = show a
 	
 	data Letter = LSet (Set Letter) | LAtom Atom deriving (Show, Ord, Eq)
 	
