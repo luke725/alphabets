@@ -89,5 +89,5 @@ module Letter where
 			)
 			partitions
 		where
-			partitions = Set.toList (allPermPart atoms)
+			partitions = Set.toList (allPermPartPreserveOrbits automorphisms atoms)
 

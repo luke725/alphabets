@@ -8,6 +8,8 @@ module Utils where
 	import qualified Data.Map as Map
 	import qualified Data.List as List
 	import qualified Control.Monad as Monad
+	import Math.Algebra.Group.PermutationGroup(Permutation)
+	import qualified Math.Algebra.Group.PermutationGroup as PG
 
 	newtype Arity = Arity Int deriving (Show, Eq, Ord)	
 	
@@ -64,6 +66,14 @@ module Utils where
 			(concatMap 
 				(\p -> map List.sort (allPartitions p)) 
 				(List.permutations l))
+				
+	partPreservesOrbits :: (Eq a) => [[a]] -> [[a]] -> Bool
+	partPreservesOrbits orbits part =
+		all (\p -> any (\o -> all (\pe -> List.elem pe o) p) orbits) part
+		
+	allPermPartPreserveOrbits :: (Ord a, Eq a) => [Permutation a] -> [a] -> Set ([[a]])
+	allPermPartPreserveOrbits g l =
+		Set.filter (partPreservesOrbits (PG.orbits g)) (allPermPart l)
 
 				
 	allJust :: [Maybe a] -> Maybe [a]
@@ -84,4 +94,16 @@ module Utils where
 		$ Map.fromList 
 		$ map (\(a, b) -> (b, a)) 
 		$ Map.toList m
+	
+	conjClassRep :: (Ord a) => Set a -> Permutation a -> Permutation a
+	conjClassRep elts p =
+		PG.fromCycles $ fst 
+		$ foldl 
+			(\(r, elts') l -> (take l elts':r, drop l elts'))
+			([], Set.toList elts)
+			conjClass
+		where
+			conjClass = List.reverse $ List.sort $ map length $ PG.toCycles p
+		
+		
 

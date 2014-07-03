@@ -214,6 +214,10 @@ module RelationalStructure where
 			rels' = Map.map filterRelation rels 
 			filterRelation (Relation (rname, ar, tuples)) =
 				Relation (rname, ar, Set.filter (\(Tuple t) -> all (\e -> Set.member e elts') t) tuples)
+				
+	filterStructure :: (Ord element) => (element -> Bool) -> Structure rname element -> Structure rname element
+	filterStructure f (Structure (sig, elts, rels)) =
+		substructure (Structure (sig, elts, rels)) (Set.filter f elts)
 	
 	
 	structPower 

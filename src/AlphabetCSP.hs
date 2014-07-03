@@ -181,6 +181,10 @@ module AlphabetCSP where
 					)
 					rels
 
+	isConjClassRep :: Element -> Bool
+	isConjClassRep (i, p) =
+		conjClassRep (Set.fromList [0..i-1]) p == p
+
 	findAlphMajority :: [Relation RName Element] -> Maybe (Map (Tuple Element) Element)
 	findAlphMajority rels =
 		case findSAC3Solution cn of
@@ -201,7 +205,8 @@ module AlphabetCSP where
 			
 			tstr :: Structure RName (Tuple Element)
 			tstr =
-				resetElements 
+				filterStructure (\(Tuple [a, _]) -> isConjClassRep a)
+				$ resetElements 
 				$ foldl 
 					(\tstr' e@(ar, _) -> 
 						addToRelation 
