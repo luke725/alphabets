@@ -10,6 +10,7 @@ module Utils where
 	import qualified Control.Monad as Monad
 	import Math.Algebra.Group.PermutationGroup(Permutation)
 	import qualified Math.Algebra.Group.PermutationGroup as PG
+	import Data.Foldable(foldlM)
 
 	newtype Arity = Arity Int deriving (Show, Eq, Ord)	
 	
@@ -73,7 +74,7 @@ module Utils where
 		
 	allPermPartPreserveOrbits :: (Ord a, Eq a) => [Permutation a] -> [a] -> Set ([[a]])
 	allPermPartPreserveOrbits g l =
-		Set.filter (partPreservesOrbits (PG.orbits g)) (allPermPart l)
+		Set.filter (partPreservesOrbits (PG.orbits g)) (allPart2 l)
 
 				
 	allJust :: [Maybe a] -> Maybe [a]
@@ -104,6 +105,27 @@ module Utils where
 			conjClass
 		where
 			conjClass = List.reverse $ List.sort $ map length $ PG.toCycles p
+			
+			
+	tr :: (Show a) => a -> a
+	tr a = trace (show a) a
+	
+	
+	allPartL :: [a] -> [[[a]]]
+	allPartL l = do
+		(le, nle) <- leaders
+		let n = length le
+		let leMap = Map.fromList (zip [1..n] le)
+		nleMap <- foldlM (\m e -> do {i <- [1..n]; return (Map.insertWith (++) i [e] m)}) Map.empty nle
+		let allMap = Map.mapWithKey (\i le' -> (le', Map.findWithDefault [] i nleMap)) leMap
+		let allVal = Map.elems allMap
+		mapM (\(le', nles) -> do {p <- List.permutations nles; return (le':p)}) allVal	
+		where
+			leaders = foldlM (\(le, nle) e -> [(e:le, nle), (le, e:nle)]) ([], []) l
+			
+	allPart2 :: (Ord a) => [a] -> Set [[a]]
+	allPart2 l = Set.fromList (allPartL l)
+			
 		
 		
 
