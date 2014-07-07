@@ -36,10 +36,11 @@ run n = do
 	
 allTogether :: String -> Int -> IO ()	
 allTogether path k = do
+	let n = 8
 	rs <- results8 path
 	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
-	let b = findMajorityGGMany standard
+	let b = findMajorityGGMany (map Atom [1..n]) standard
 	case b of 
 		Nothing -> putStrLn "Nothing"
 		Just m ->
@@ -48,7 +49,7 @@ allTogether path k = do
 
 all5 :: IO ()	
 all5 = do
-	let b = findMajorityGGMany s5
+	let b = findMajorityGGMany (map Atom [1..5]) s5
 	case b of 
 		Nothing -> putStrLn "Nothing"
 		Just m ->

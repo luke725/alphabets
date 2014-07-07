@@ -1,6 +1,7 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
 module AlphabetCSP where
+	import Debug.Trace
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
@@ -100,8 +101,8 @@ module AlphabetCSP where
 	findMajorityGG :: GroupGens -> Maybe (Map (Tuple Element) Element)
 	findMajorityGG gg = findMajorityAutomorphisms (ggAtoms gg) (ggElements gg)
 	
-	findMajorityGGMany :: [GroupGens] -> Maybe (Map (Tuple Element) Element)
-	findMajorityGGMany ggList =
+	findMajorityGGMany :: [Atom] -> [GroupGens] -> Maybe (Map (Tuple Element) Element)
+	findMajorityGGMany _atoms ggList =
 		 case mm' of
 		 	Just m' ->
 		 		case mm'' of
@@ -117,8 +118,8 @@ module AlphabetCSP where
 				$ Map.toList
 				$ removeDup
 				$ Map.unions
-				$ map (\gg -> Map.mapKeys (\as -> Left ((ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg) (ggElements gg))
-				$ ggList
+				$ map (\(i, gg) -> Map.mapKeys (\as -> Left ((ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg) (trace (show i) $ ggElements gg))
+				$ zip [1..length ggList] ggList
 			rels' =
 				filter 
 					(\r -> 
