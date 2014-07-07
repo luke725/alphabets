@@ -36,7 +36,7 @@ run n = do
 	
 allTogether :: String -> Int -> IO ()	
 allTogether path k = do
-	rs <- results7 path
+	rs <- results8 path
 	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
 	putStrLn (show $ length standard)
 	let b = findMajorityGGMany standard
