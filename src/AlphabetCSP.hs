@@ -7,7 +7,6 @@ module AlphabetCSP where
 	import qualified Data.List as List
 	import Data.Map (Map)
 	import qualified Data.Map as Map
---	import qualified Data.Maybe as Maybe
 	import Math.Algebra.Group.PermutationGroup(Permutation, (~^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
 	import qualified Math.Algebra.Group.SchreierSims as SS
