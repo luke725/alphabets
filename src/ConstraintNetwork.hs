@@ -51,7 +51,7 @@ module ConstraintNetwork where
 			elemsDcm = Set.toList $ Map.fold (\ds s -> Set.fold (\(d1, d2) s' -> Set.insert d1 $ Set.insert d2 s') s ds) Set.empty $ constraintMap cn
 			
 			mapV = Map.fromList $ zip elemsV [1..length elemsV]
-			mapD = Map.fromList $ zip elemsD [1..length elemsV]
+			mapD = Map.fromList $ zip elemsD [1..length elemsD]
 			coreElems' = Set.map (\e -> mapV ! e) $ coreElems cn
 			domainMap' = Map.mapKeys (\e -> mapV ! e) $ Map.map (Set.map (\e -> mapD ! e)) $ domainMap cn
 			constraintMap' = Map.mapKeys (\(e1, e2) -> (mapV ! e1, mapV ! e2)) $ Map.map (Set.map (\(e1, e2) -> (mapD ! e1, mapD ! e2))) $ constraintMap cn
