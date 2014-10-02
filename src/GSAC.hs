@@ -12,6 +12,7 @@ module GSAC where
 	import qualified PossibleSolutions as PS
 	import RelationalStructure
 	import GAC2001
+	import Utils
 
 	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
@@ -51,21 +52,14 @@ module GSAC where
 		-> PossibleSolutions v d 
 		-> Either (Map v d) (PossibleSolutions v d)
 		
-	runGsac vstr dstr sol =
-		gsacStep emptyLast (runGac vstr dstr sol) sol
+	runGsac vstr dstr sol = do
+		(_, sol') <- fixPointM gsacStep (emptyLast, runGac vstr dstr sol)
+		return sol'
 		where
-			gsacStep :: Last v d -> PossibleSolutions v d -> PossibleSolutions v d -> Either (Map v d) (PossibleSolutions v d)
-			gsacStep last' dom' dom =
-				if dom == dom' 
-				then Right dom 
-				else
-					case gsacStep' last' dom' of
-						Left m      -> Left m
-						Right (last'', dom'') -> gsacStep last'' dom'' dom'
-			
-			gsacStep' last' dom =
-				case runState (buildBranch (PS.toMap dom)) (last', dom) of
-					(Nothing, (last'', dom')) -> Right (last'', dom')
+			gsacStep :: (Last v d, PossibleSolutions v d) -> Either (Map v d) (Last v d, PossibleSolutions v d)
+			gsacStep (last, dom) =
+				case runState (buildBranch (PS.toMap dom)) (last, dom) of
+					(Nothing, (last', dom')) -> Right (last', dom')
 					(Just m, _)          -> Left m
 				
 			buildBranch :: Map v (Set d) -> GACState v d (Maybe (Map v d))
@@ -76,7 +70,7 @@ module GSAC where
 					(last, dom) <- get
 					bb <- buildBranch' m (Map.keys m) (Map.empty)
 					case bb of
-						Left m'          -> return (Just m')
+						Left m'         -> return (Just m')
 						Right (del, m') -> do
 							put (last, dom)
 							case del of

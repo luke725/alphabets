@@ -23,7 +23,7 @@ module UtilsTest (tests) where
 		coarbitrary (Tuple t) = coarbitrary t
 	
 	tests :: TestTree
-	tests = testGroup "Utils" [testCartesianPowerLength, testRemoveDupOne, testRemoveDupDouble, testPartitionsConcat, testPartitionsSimple, testPartitions2Concat, testPartitions2Simple, testPartitions2Comp]
+	tests = testGroup "Utils" [testCartesianPowerLength, testRemoveDupOne, testRemoveDupDouble, testPartitionsConcat, testPartitionsSimple, testPartitions2Concat, testPartitions2Simple, testPartitions2Comp, testAllTuples]
 		
 	testCartesianPowerLength = 
 		QC.testProperty "cartesian power length"
@@ -72,4 +72,20 @@ module UtilsTest (tests) where
 		$ (\(l :: [Int]) ->
 			length l < 7 QC.==> (Set.map List.sort (allPart2 l) == Set.map List.sort (allPermPart l))
 		)
+		
+	allTuples :: (Ord v) => [Set v] -> [Tuple v]
+	allTuples s =
+		case firstTuple s of
+			Just t  -> t : allNextTuples t
+			Nothing -> []
+		where
+			allNextTuples t =
+				case nextTuple s t of
+					Just t' -> t' : allNextTuples t'
+					Nothing -> []
+		
+		
+	testAllTuples =
+		testCase "all tuples"
+		$ allTuples [Set.fromList [1,2], Set.fromList [3], Set.fromList [4,5]] @?= [Tuple [1,3,4], Tuple [1,3,5], Tuple [2,3,4], Tuple [2,3,5]]
 		

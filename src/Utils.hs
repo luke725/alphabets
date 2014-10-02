@@ -16,6 +16,15 @@ module Utils where
 	
 	newtype Tuple element = Tuple [element] deriving (Show, Eq, Ord)
 	
+	fixPoint :: (Eq a) => (a -> a) -> a -> a
+	fixPoint f a =
+		if a == f a then a else fixPoint f (f a)
+		
+	fixPointM :: (Monad m, Eq a) => (a -> m a) -> a -> m a
+	fixPointM f a = do
+		a' <- f a
+		if a == a' then return a else fixPointM f a'
+	
 	arity :: Tuple a -> Arity
 	arity (Tuple t) = Arity (length t)
 	
