@@ -47,6 +47,9 @@ module RelationalStructure where
 	
 	relationNames :: Signature rname -> [rname]
 	relationNames (Signature arMap) = Map.keys arMap
+	
+	strElems :: Structure rname v -> Set v
+	strElems (Structure (_, elems, _) = elems
 
 	
 	createRelation 

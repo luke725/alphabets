@@ -1,31 +1,27 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-module GAC where
-	newtype Constraint rname v = Constraint (rname, Tuple v)
-	newtype Last rname v d = Last (Map ((v, d), Constraint rname v) (Tuple d))
-	type GACState rname v d = State (Last rname v d, PossibleSolutions v d)
+module GAC2001 where
+	newtype Constraint v d = Constraint (Tuple v, Set (Tuple d))
+	newtype Last v d = Last (Map ((v, d), Constraint v d) (Tuple d))
+	type GACState v d = State (Last v d, PossibleSolutions v d)
 	
-	gac2001
-		:: forall v d rname. (Ord v, Ord d, Ord rname) 
+	runGac :: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
 		-> Structure rname d
 		-> PossibleSolutions v d 
 		-> PossibleSoultions v d
 		
-	gac2001 vstr dstr sol = snd $ gac2001' vstr dstr (Last $ Map.empty) sol
+	runGac vstr dstr sol = snd $ execState (gac vstr dstr) (emptyLast, sol)
 	
-	gac2001' 
-		:: forall v d rname. (Ord v, Ord d, Ord rname) 
+	gac :: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
 		-> Structure rname d 
-		-> Last rname v d 
-		-> PossibleSolutions v d 
-		-> (Last rname v d, PossibleSoultions v d)
+		-> GACState v d
 		
-	gac2001' vstr dstr last sol =
-		execState (gacStep q) (last, sol)
+	gac vstr dstr last sol =
+		gacStep qAll
 		where
-			gacStep :: Set (v, Constraint rname v) -> GACState rname v d ()
+			gacStep :: Set (v, Constraint v d) -> GACState v d ()
 			gacStep q =
 				if Set.empty q
 				then return ()
@@ -34,9 +30,21 @@ module GAC where
 					delete <- revise dstr (v, c)
 					let q'' = if delete then addNeighbors (v, c) q' else q'
 					gacStep q''
+					
+			addNeighbors :: (v, Constraint v d) -> Set (v, Constraint v d) -> Set (v, Constraint v d)
+			addNeighbors (v, c) q =
+				foldl (\q' e -> Set.insert e q') q 
+				$ filter (\(v', c') -> v != v' && c != c' && List.member v' (constraintVars c'))
+				$ Set.toList qAll
+			
+			qAll :: Set (v, Constraint v d)
+			qAll = 
+				Set.fromList 
+				$ concatMap (\c -> map (\v -> (v, c)) (constraintVars c)) 
+				$ allConstraints vstr dstr
 			
 			
-	revise :: (Ord v, Ord d, Ord rname) => Structure rname d -> (v, Constraint rname v) -> GACState rname v d Bool
+	revise :: (Ord v, Ord d, Ord rname) => Structure rname d -> (v, Constraint v d) -> GACState rname v d Bool
 	revise dstr (v, c) = do
 		dom <- getDomain v
 		orM (map reviseD $ Set.toList dom)
@@ -51,8 +59,7 @@ module GAC where
 					dom <- getDomain v
 					setDomain v (Set.singleton a)
 					doms <- getDomains c
-					let (Constraint (rname,_)) = c
-					case nextOkTuple (RelationStructure.isInRelation dstr rname) doms t of
+					case nextOkTuple (meetsConstraint c) doms t of
 						Just t' -> do
 							setLast ((v,d), c) t'
 							setDomain v dom
@@ -66,11 +73,7 @@ module GAC where
 				return $ all (\(v, d) -> Set.member v d) (zip ts doms)
 				
 			getDomains (Constraint (_, Tuple ts)) = do
-				mapM getDomain ts
-				
-					
-			
-				
+				mapM getDomain ts	
 	
 	getLast :: (Ord v, Ord d, Ord rname) => (Map ((v, d), Constraint rname v) -> GACState rname v d (Maybe (Tuple d))
 	getLast k = do
@@ -92,7 +95,16 @@ module GAC where
 		(last, sol) <- get
 		put (last, PossibleSolutions.setDomain v ds sol)
 		
-	allConstraints :: Structure rname v -> [Constraint rname v]
+	allConstraints :: Structure rname v -> Structure rname d -> [Constraint v d]
+	
+	meetsConstraint :: (Ord d) => Constraint v d -> Tuple d -> Bool
+	meetsConstraint (Constraint (,ds)) t = Set.member t ds
+	
+	constraintVars :: Constraint v d -> [v]
+	constraintVars (Constraint (Tuple vs, _)) = vs
+	
+	emptyLast :: Last v d
+	emptyLast = Last Map.empty
 	
 	firstTuple :: [Set v] -> Maybe (Tuple v)
 	firstTuple [] = Just (Tuple [])
