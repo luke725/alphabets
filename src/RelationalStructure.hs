@@ -49,7 +49,7 @@ module RelationalStructure where
 	relationNames (Signature arMap) = Map.keys arMap
 	
 	strElems :: Structure rname v -> Set v
-	strElems (Structure (_, elems, _) = elems
+	strElems (Structure (_, elems, _)) = elems
 
 	
 	createRelation 
@@ -87,6 +87,12 @@ module RelationalStructure where
 	
 	signature :: Structure rname element -> Signature rname
 	signature (Structure (sig, _, _)) = sig
+	
+	relationTuples :: (Ord rname) => Structure rname element -> rname -> Set (Tuple element)
+	relationTuples (Structure (_, _, relMap)) rname =
+		relSet
+		where
+			Relation (_, _, relSet) = relMap!rname
 		
 				
 	expectRelation :: (Ord rname, Show rname) => Signature rname -> rname -> Arity -> a -> a

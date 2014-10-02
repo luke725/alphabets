@@ -1,40 +1,52 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
 module GAC2001 where
-	newtype Constraint v d = Constraint (Tuple v, Set (Tuple d))
-	newtype Last v d = Last (Map ((v, d), Constraint v d) (Tuple d))
+	import Data.Set(Set)
+	import qualified Data.Set as Set
+	import Data.Map(Map)
+	import qualified Data.Map as Map
+	import Control.Monad.State
+	import Prelude hiding (last)
+
+	import PossibleSolutions (PossibleSolutions)
+	import qualified PossibleSolutions as PS
+	import Utils
+	import RelationalStructure
+
+	newtype Constraint v d = Constraint (Tuple v, Set (Tuple d)) deriving (Show, Eq, Ord)
+	newtype Last v d = Last (Map ((v, d), Constraint v d) (Tuple d)) deriving (Show, Eq, Ord)
 	type GACState v d = State (Last v d, PossibleSolutions v d)
 	
 	runGac :: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
 		-> Structure rname d
 		-> PossibleSolutions v d 
-		-> PossibleSoultions v d
+		-> PossibleSolutions v d
 		
 	runGac vstr dstr sol = snd $ execState (gac vstr dstr) (emptyLast, sol)
 	
 	gac :: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
-		-> Structure rname d 
-		-> GACState v d
+		-> Structure rname d
+		-> GACState v d ()
 		
-	gac vstr dstr last sol =
+	gac vstr dstr =
 		gacStep qAll
 		where
 			gacStep :: Set (v, Constraint v d) -> GACState v d ()
 			gacStep q =
-				if Set.empty q
+				if Set.size q == 0
 				then return ()
 				else do
 					let ((v, c), q') = Set.deleteFindMin q
-					delete <- revise dstr (v, c)
+					delete <- revise (v, c)
 					let q'' = if delete then addNeighbors (v, c) q' else q'
 					gacStep q''
 					
 			addNeighbors :: (v, Constraint v d) -> Set (v, Constraint v d) -> Set (v, Constraint v d)
 			addNeighbors (v, c) q =
 				foldl (\q' e -> Set.insert e q') q 
-				$ filter (\(v', c') -> v != v' && c != c' && List.member v' (constraintVars c'))
+				$ filter (\(v', c') -> v /= v' && c /= c' && elem v' (constraintVars c'))
 				$ Set.toList qAll
 			
 			qAll :: Set (v, Constraint v d)
@@ -44,61 +56,71 @@ module GAC2001 where
 				$ allConstraints vstr dstr
 			
 			
-	revise :: (Ord v, Ord d, Ord rname) => Structure rname d -> (v, Constraint v d) -> GACState rname v d Bool
-	revise dstr (v, c) = do
+	revise :: forall v d. (Ord v, Ord d) => (v, Constraint v d) -> GACState v d Bool
+	revise (v, c) = do
 		dom <- getDomain v
-		orM (map reviseD $ Set.toList dom)
+		rs <- (mapM reviseD $ Set.toList dom)
+		return (or rs)
 		where
-			reviseD :: d -> GACState rname v d Bool
+			reviseD :: d -> GACState v d Bool
 			reviseD d = do
-				t <- getLast ((v,d), c)
-				ok <- testTuple (c, t)
+				mt <- getLast ((v,d), c)
+				ok <- case mt of
+					Just t -> testTuple t
+					Nothing -> return False
 				if ok
 				then return False
 				else do
 					dom <- getDomain v
-					setDomain v (Set.singleton a)
+					setDomain v (Set.singleton d)
 					doms <- getDomains c
-					case nextOkTuple (meetsConstraint c) doms t of
+					case nextOkTuple (meetsConstraint c) doms mt of
 						Just t' -> do
 							setLast ((v,d), c) t'
 							setDomain v dom
 							return False
 						Nothing -> do
-							setDomain v (Set.delete a dom)
+							setDomain v (Set.delete d dom)
 							return True
 							
-			testTuple (c, Tuple ts) = do 
+			testTuple (Tuple ts) = do 
 				doms <- getDomains c
-				return $ all (\(v, d) -> Set.member v d) (zip ts doms)
+				return $ all (\(v', d') -> Set.member v' d') (zip ts doms)
 				
-			getDomains (Constraint (_, Tuple ts)) = do
+			getDomains (Constraint (Tuple ts, _)) = do
 				mapM getDomain ts	
 	
-	getLast :: (Ord v, Ord d, Ord rname) => (Map ((v, d), Constraint rname v) -> GACState rname v d (Maybe (Tuple d))
+	getLast :: (Ord v, Ord d) => ((v, d), Constraint v d) -> GACState v d (Maybe (Tuple d))
 	getLast k = do
 		(Last m, _) <- get
 		return $ Map.lookup k m
 		
-	setLast :: (Map ((v, d), Constraint rname v) -> Tuple d -> GACState rname v d ()
+	setLast :: (Ord v, Ord d) => ((v, d), Constraint v d) -> Tuple d -> GACState v d ()
 	setLast k t = do
 		(Last m, sol) <- get
-		set (Map.insert k t m, sol)
+		put (Last $ Map.insert k t m, sol)
 		
-	getDomain :: (Ord v) => v -> GACState rname v d (Set d)
+	getDomain :: (Ord v) => v -> GACState v d (Set d)
 	getDomain v = do
 		(_, sol) <- get
-		return (PossibleSolutions.domain sol v)
+		return (PS.domain sol v)
 		
-	setDomain :: (Ord v) => v -> Set d -> GACState rname v d ()
+	setDomain :: (Ord v) => v -> Set d -> GACState v d ()
 	setDomain v ds = do
 		(last, sol) <- get
-		put (last, PossibleSolutions.setDomain v ds sol)
+		put (last, PS.setDomain v ds sol)
 		
-	allConstraints :: Structure rname v -> Structure rname d -> [Constraint v d]
+	allConstraints :: (Ord rname) => Structure rname v -> Structure rname d -> [Constraint v d]
+	allConstraints vstr dstr =
+		concatMap 
+			(\rname -> 
+				map 
+					(\t -> Constraint (t, relationTuples dstr rname)) 
+					(Set.toList $ relationTuples vstr rname)) 
+			(relationNames $ signature vstr)
 	
 	meetsConstraint :: (Ord d) => Constraint v d -> Tuple d -> Bool
-	meetsConstraint (Constraint (,ds)) t = Set.member t ds
+	meetsConstraint (Constraint (_,ds)) t = Set.member t ds
 	
 	constraintVars :: Constraint v d -> [v]
 	constraintVars (Constraint (Tuple vs, _)) = vs
@@ -106,41 +128,14 @@ module GAC2001 where
 	emptyLast :: Last v d
 	emptyLast = Last Map.empty
 	
-	firstTuple :: [Set v] -> Maybe (Tuple v)
-	firstTuple [] = Just (Tuple [])
-	firstTuple (hs:ts) = 
-		if Set.empty hs 
-		then Nothing 
-		else 
-			case firstTuple ts of
-				Just r -> Just (Set.findMin hs : r)
-				Nothing -> Nothing
-	
-	nextTuple :: [Set v] -> Tuple v -> Maybe (Tuple v)
-	nextTuple [] (Tuple []) = Just (Tuple [])
-	nextTuple [hs] (Tuple [ht]) =
-		let (_, _, ls) in firstTuple [ls]
-		
-	nextTuple (hs:ts) (Tuple (ht:tt)) =
-		case Set.splitMember ht hs of
-			(_, False, ls) -> firstTuple (ls:ts)
-			(_, True, ls) ->
-				case nextTuple ts tt of
-					Just (Tuple rt) -> Just (Tuple (ht:rt))
-					Nothing -> firstTuple (ls:ts)
-	nextTuple [] (_:_) = error
-	nextTuple (_:_) [] = error
-	
-	nextOkTuple :: (Tuple v -> Bool) -> [Set v] -> Tuple v -> Maybe (Tuple v)
-	nextOkTuple c s t =
-		case nextTuple s t of
-			Just nt -> okTuple c s nt
-			Nothing -> Nothing
+	nextOkTuple :: (Ord v) => (Tuple v -> Bool) -> [Set v] -> Maybe (Tuple v) -> Maybe (Tuple v)
+	nextOkTuple c s mt =
+		case mt of
+			Just t -> nextTuple s t >>= okTuple
+			Nothing -> firstTuple s >>= okTuple
 		where
-			okTuple c s t =
+			okTuple t =
 				if c t 
 				then Just t 
-				else nextOkTuple c s t
-				
+				else nextOkTuple c s (Just t)
 	
-		

@@ -5,18 +5,19 @@ module AlphabetCSP where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
-	import Data.Map (Map, (!))
+	import Data.Map (Map)
 	import qualified Data.Map as Map
-	import qualified Data.Maybe as Maybe
+--	import qualified Data.Maybe as Maybe
 	import Math.Algebra.Group.PermutationGroup(Permutation, (~^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
 	import qualified Math.Algebra.Group.SchreierSims as SS
 
 	import RelationalStructure
 	import Letter
-	import SAC3
-	import ConstraintNetwork
+--	import SAC3
+--	import ConstraintNetwork
 	import Utils
+	import GSAC
 	
 	type Element = (Int, Permutation Int)
 

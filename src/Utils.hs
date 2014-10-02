@@ -125,7 +125,31 @@ module Utils where
 			
 	allPart2 :: (Ord a) => [a] -> Set [[a]]
 	allPart2 l = Set.fromList (allPartL l)
-			
+	
+	
+	
+	firstTuple :: [Set v] -> Maybe (Tuple v)
+	firstTuple [] = Just (Tuple [])
+	firstTuple (hs:ts) = 
+		if Set.size hs == 0
+		then Nothing 
+		else 
+			case firstTuple ts of
+				Just (Tuple r) -> Just (Tuple (Set.findMin hs : r))
+				Nothing -> Nothing
+	
+	nextTuple :: (Ord v) => [Set v] -> Tuple v -> Maybe (Tuple v)
+	nextTuple [] (Tuple []) = Just (Tuple [])
+	nextTuple [hs] (Tuple [ht]) =
+		let (_, _, ls) = Set.splitMember ht hs in firstTuple [ls]
 		
-		
+	nextTuple (hs:ts) (Tuple (ht:tt)) =
+		case Set.splitMember ht hs of
+			(_, False, ls) -> firstTuple (ls:ts)
+			(_, True, ls) ->
+				case nextTuple ts (Tuple tt) of
+					Just (Tuple rt) -> Just (Tuple (ht:rt))
+					Nothing -> firstTuple (ls:ts)
+	nextTuple [] (Tuple (_:_)) = error ("Unexpected pattern in nextTuple")
+	nextTuple (_:_) (Tuple []) = error ("Unexpected pattern in nextTuple")
 
