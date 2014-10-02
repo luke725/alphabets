@@ -188,15 +188,16 @@ module AlphabetCSP where
 
 	findAlphMajority :: [Relation RName Element] -> Maybe (Map (Tuple Element) Element)
 	findAlphMajority rels =
-		case findSAC3Solution cn of
-			Just m' -> Just (Map.fromList $ Maybe.catMaybes $ map mapMap $ map (\(v', d') -> (backV ! v', backD ! d')) $ Map.toList m')
-			Nothing -> Nothing
+--		case findSAC3Solution cn of
+--			Just m' -> Just (Map.fromList $ Maybe.catMaybes $ map mapMap $ map (\(v', d') -> (backV ! v', backD ! d')) $ Map.toList m')
+--			Nothing -> Nothing
+		findSolution tstr str 
 		where
-			mapMap (CSPElem v, CSPElem d) = Just (v, d)
-			mapMap (CSPTuple _, CSPTuple _) = Nothing
-			mapMap (_, _) = error ("Unexpected pattern in findAlphMajority")
+--			mapMap (CSPElem v, CSPElem d) = Just (v, d)
+--			mapMap (CSPTuple _, CSPTuple _) = Nothing
+--			mapMap (_, _) = error ("Unexpected pattern in findAlphMajority")
 			
-			(cn, backV, backD) = translate (fromCSP tstr str)
+--			(cn, backV, backD) = translate (fromCSP tstr str)
 			elts = elementsFromRels rels
 			
 			rels' = rels ++ map (\e -> Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts)
