@@ -5,18 +5,19 @@ module AlphabetCSP where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
-	import Data.Map (Map, (!))
+	import Data.Map (Map)
 	import qualified Data.Map as Map
-	import qualified Data.Maybe as Maybe
-	import Math.Algebra.Group.PermutationGroup(Permutation)
+--	import qualified Data.Maybe as Maybe
+	import Math.Algebra.Group.PermutationGroup(Permutation, (~^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
 	import qualified Math.Algebra.Group.SchreierSims as SS
 
 	import RelationalStructure
 	import Letter
-	import SAC3
-	import ConstraintNetwork
+--	import SAC3
+--	import ConstraintNetwork
 	import Utils
+	import GSAC
 	
 	type Element = (Int, Permutation Int)
 
@@ -90,12 +91,12 @@ module AlphabetCSP where
 	
 	ggAtoms :: GroupGens -> [Atom]
 	ggAtoms gg = 
-		if n < 4 then -- TODO: fix it
-			ggList ++ (map Atom [100..(103 - n)]) 
-		else
-			ggList
+--		if n < 4 then -- TODO: fix it
+--			ggList ++ (map Atom [100..(103 - n)]) 
+--		else
+		ggList
 		where
-			n = List.length ggList
+--			n = List.length ggList
 			ggList = List.nub (concat $ concat gg)
 					
 	findMajorityGG :: GroupGens -> Maybe (Map (Tuple Element) Element)
@@ -188,15 +189,17 @@ module AlphabetCSP where
 
 	findAlphMajority :: [Relation RName Element] -> Maybe (Map (Tuple Element) Element)
 	findAlphMajority rels =
-		case findSAC3Solution cn of
-			Just m' -> Just (Map.fromList $ Maybe.catMaybes $ map mapMap $ map (\(v', d') -> (backV ! v', backD ! d')) $ Map.toList m')
-			Nothing -> Nothing
+--		case findSAC3Solution cn of
+--			Just m' -> Just (Map.fromList $ Maybe.catMaybes $ map mapMap $ map (\(v', d') -> (backV ! v', backD ! d')) $ Map.toList m')
+--			Nothing -> Nothing
+		findSolutionFast tstr str 
 		where
-			mapMap (CSPElem v, CSPElem d) = Just (v, d)
-			mapMap (CSPTuple _, CSPTuple _) = Nothing
-			mapMap (_, _) = error ("Unexpected pattern in findAlphMajority")
+--			mapMap (CSPElem v, CSPElem d) = Just (v, d)
+--			mapMap (CSPTuple _, CSPTuple _) = Nothing
+--			mapMap (_, _) = error ("Unexpected pattern in findAlphMajority")
 			
-			(cn, backV, backD) = translate (fromCSP tstr str)
+--			(cn, backV, backD) = translate (fromCSP tstr str)
+
 			elts = elementsFromRels rels
 			
 			rels' = rels ++ map (\e -> Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts)
@@ -206,7 +209,8 @@ module AlphabetCSP where
 			
 			tstr :: Structure RName (Tuple Element)
 			tstr =
-				filterStructure (\(Tuple [a, _]) -> isConjClassRep a)
+--				filterStructure (\(Tuple [a, _]) -> isConjClassRep a)
+				conjClassOnly
 				$ resetElements 
 				$ foldl 
 					(\tstr' e@(ar, _) -> 
@@ -220,5 +224,18 @@ module AlphabetCSP where
 					) 
 					(structPower str 2) 
 					(Set.toList elts)
-
+					
+			conjClassOnly :: Structure RName (Tuple Element) -> Structure RName (Tuple Element)
+			conjClassOnly (Structure (sig, elems, relMap)) =
+				substructure (Structure (sig, elems, relMap)) (classReps elems)
+				
+			classReps :: Set (Tuple Element) -> Set (Tuple Element)
+			classReps elems =
+				fst $ foldl (\(cr, ce) e -> if Set.member e ce then (cr, ce) else (Set.insert e cr, Set.union (classElems e) ce)) (Set.empty, Set.empty) (Set.toList elems)
+				
+			classElems :: Tuple Element -> Set (Tuple Element)
+			classElems (Tuple [(n1, p1), (n2, p2)]) = -- n1 == n2
+				if (n1 /= n2) then error "error" else
+					Set.fromList (map (\g -> Tuple [(n1, p1 ~^ g), (n2, p2 ~^ g)]) (map PG.fromList (List.permutations [0..n1-1])))
+			classElems _ = error "Wrong pattern"
 

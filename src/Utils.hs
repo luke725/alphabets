@@ -16,6 +16,15 @@ module Utils where
 	
 	newtype Tuple element = Tuple [element] deriving (Show, Eq, Ord)
 	
+	fixPoint :: (Eq a) => (a -> a) -> a -> a
+	fixPoint f a =
+		if a == f a then a else fixPoint f (f a)
+		
+	fixPointM :: (Monad m, Eq a) => (a -> m a) -> a -> m a
+	fixPointM f a = do
+		a' <- f a
+		if a == a' then return a else fixPointM f a'
+	
 	arity :: Tuple a -> Arity
 	arity (Tuple t) = Arity (length t)
 	
@@ -125,7 +134,31 @@ module Utils where
 			
 	allPart2 :: (Ord a) => [a] -> Set [[a]]
 	allPart2 l = Set.fromList (allPartL l)
-			
+	
+	
+	
+	firstTuple :: [Set v] -> Maybe (Tuple v)
+	firstTuple [] = Just (Tuple [])
+	firstTuple (hs:ts) = 
+		if Set.size hs == 0
+		then Nothing 
+		else 
+			case firstTuple ts of
+				Just (Tuple r) -> Just (Tuple (Set.findMin hs : r))
+				Nothing -> Nothing
+	
+	nextTuple :: (Ord v) => [Set v] -> Tuple v -> Maybe (Tuple v)
+	nextTuple [] (Tuple []) = Just (Tuple [])
+	nextTuple [hs] (Tuple [ht]) =
+		let (_, _, ls) = Set.splitMember ht hs in firstTuple [ls]
 		
-		
+	nextTuple (hs:ts) (Tuple (ht:tt)) =
+		case Set.splitMember ht hs of
+			(_, False, ls) -> firstTuple (ls:ts)
+			(_, True, ls) ->
+				case nextTuple ts (Tuple tt) of
+					Just (Tuple rt) -> Just (Tuple (ht:rt))
+					Nothing -> firstTuple (ls:ts)
+	nextTuple [] (Tuple (_:_)) = error ("Unexpected pattern in nextTuple")
+	nextTuple (_:_) (Tuple []) = error ("Unexpected pattern in nextTuple")
 
