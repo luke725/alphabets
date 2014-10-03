@@ -14,7 +14,7 @@ module GSAC where
 	import GAC2001
 	import Utils
 
-	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname) 
+	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
 		=> Structure rname v 
 		-> Structure rname d
 		-> Maybe (Map v d)
@@ -80,6 +80,9 @@ module GSAC where
 									gac vstr dstr
 									return Nothing
 								Nothing -> buildBranch m'
+								
+--			domSize m =
+--				sum $ map (\(_, s) -> Set.size s) (Map.toList m)
 	
 			buildBranch' 
 				:: Map v (Set d) 
@@ -93,23 +96,29 @@ module GSAC where
 				else return (Right (Nothing, m))
 				
 			buildBranch' m (v:free) br =
-				if Set.size (m!v) == 0
-				then buildBranch' m free br
-				else do
-					let mv = m!v
-					let d = Set.findMin (mv)
-					let m' = Map.insert v (Set.deleteMin (mv)) m
-					dv <- getDomain v
-					if not (Set.member d dv) 
-					then buildBranch' m' (v:free) br 
-					else do
-						setDomain v (Set.singleton d)
-						gac vstr dstr
-						(_, dom') <- get
-						if PS.notEmpty dom'
-						then
-							buildBranch' m' free (Map.insert v d br)
+				case Map.lookup v m of
+					Nothing -> buildBranch' m free br
+					Just mv ->
+						if Set.size (m!v) == 0
+						then buildBranch' (Map.delete v m) free br
 						else do
-							if Map.size br > 0
-							then return (Right (Nothing, m))
-							else return (Right (Just (v, d), m'))
+							let d = Set.findMin mv
+							let m' = 
+								if Set.size mv > 1 
+								then Map.insert v (Set.deleteMin (mv)) m 
+								else Map.delete v m
+							dv <- getDomain v
+							if not (Set.member d dv) 
+							then buildBranch' m' (v:free) br 
+							else do
+								setDomain v (Set.singleton d)
+								gac vstr dstr
+								(_, dom') <- get
+								if PS.notEmpty dom'
+								then
+									buildBranch' m' free (Map.insert v d br)
+								else do
+									if Map.size br > 0
+									then return (Right (Nothing, m))
+									else return (Right (Just (v, d), m'))
+
