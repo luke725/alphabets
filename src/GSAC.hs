@@ -35,7 +35,7 @@ module GSAC where
 		-> Maybe (Map v d)
 		
 	findSolution vstr dstr =
-		case runGsac vstr dstr (PS.full (strElems vstr) (strElems dstr)) of
+		case runGsac' vstr dstr cspDataVD (PS.full (strElems vstr) (strElems dstr)) of
 			Left m -> Just m
 			Right sol -> 
 				if PS.notEmpty sol
@@ -52,13 +52,14 @@ module GSAC where
 			
 			setValue' _ _ [] = Left Nothing
 			setValue' sol v (d:ds) =
-				case runGsac vstr dstr (PS.setDomain v (Set.singleton d) sol) of
+				case runGsac' vstr dstr cspDataVD (PS.setDomain v (Set.singleton d) sol) of
 					Left m -> Left (Just m)
 					Right sol' ->
 						if PS.notEmpty sol'
 						then Right sol'
 						else setValue' sol v ds
-				
+						
+			cspDataVD = cspData vstr dstr
 
 	runGsac
 		:: forall v d rname. (Ord v, Ord d, Ord rname) 
@@ -67,7 +68,18 @@ module GSAC where
 		-> PossibleSolutions v d 
 		-> Either (Map v d) (PossibleSolutions v d)
 		
-	runGsac vstr dstr sol = do
+	runGsac vstr dstr sol = runGsac' vstr dstr (cspData vstr dstr) sol
+				
+
+	runGsac'
+		:: forall v d rname. (Ord v, Ord d, Ord rname) 
+		=> Structure rname v 
+		-> Structure rname d
+		-> CSPData v d
+		-> PossibleSolutions v d 
+		-> Either (Map v d) (PossibleSolutions v d)
+		
+	runGsac' vstr dstr cspDataVD sol = do
 		(_, sol') <- fixPointM gsacStep (emptyLast, runGac vstr dstr sol)
 		return sol'
 		where
@@ -92,7 +104,7 @@ module GSAC where
 								Just (v, d) -> do
 									dv <- getDomain v
 									setDomain v (Set.delete d dv)
-									gac vstr dstr
+									gac cspDataVD
 									return Nothing
 								Nothing -> buildBranch m'
 								
@@ -127,7 +139,7 @@ module GSAC where
 							then buildBranch' m' (v:free) br 
 							else do
 								setDomain v (Set.singleton d)
-								gac vstr dstr
+								gac cspDataVD
 								(_, dom') <- get
 								if PS.notEmpty dom'
 								then
