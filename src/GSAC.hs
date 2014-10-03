@@ -13,6 +13,21 @@ module GSAC where
 	import RelationalStructure
 	import GAC2001
 	import Utils
+	
+	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
+		=> Structure rname v 
+		-> Structure rname d
+		-> Maybe (Map v d)
+		
+	findSolutionFast vstr dstr =
+		case findSolution vstrInt dstrInt of
+			Just m -> Just $ Map.fromList $ map (\(vi, di) -> (vstrMap!vi, dstrMap!di)) $ Map.toList m
+			Nothing -> Nothing
+		where
+			(vstrInt, vstrMap, _) = intStructure vstr
+			(dstrInt, dstrMap, _) = intStructure dstr
+			
+	
 
 	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
 		=> Structure rname v 

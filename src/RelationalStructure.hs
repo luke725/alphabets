@@ -250,3 +250,19 @@ module RelationalStructure where
 
 			rels' = Map.map transform_relation rels
 
+
+	intStructure 
+		:: forall element rname. (Ord element, Ord rname)
+		=> Structure rname element
+		-> (Structure rname Int, Map Int element, Map element Int)
+		
+	intStructure (Structure (sig, elts, rels)) =
+		(Structure (sig, nelts, nrels), map1, map2)
+		where
+			eltsZipList = zip [1..Set.size elts] $ Set.toList elts
+			map1 = Map.fromList eltsZipList
+			map2 = Map.fromList $ map (\(a, b) -> (b, a)) eltsZipList
+			nelts = Set.fromList [1..Set.size elts]
+			mapRel (Relation (rname, ar, tuples)) = 
+				Relation (rname, ar, Set.map (\(Tuple xs) -> Tuple $ map (\x -> map2!x) xs) tuples)
+			nrels = Map.map mapRel rels

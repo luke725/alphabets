@@ -192,13 +192,14 @@ module AlphabetCSP where
 --		case findSAC3Solution cn of
 --			Just m' -> Just (Map.fromList $ Maybe.catMaybes $ map mapMap $ map (\(v', d') -> (backV ! v', backD ! d')) $ Map.toList m')
 --			Nothing -> Nothing
-		findSolution tstr str 
+		findSolutionFast tstr str 
 		where
 --			mapMap (CSPElem v, CSPElem d) = Just (v, d)
 --			mapMap (CSPTuple _, CSPTuple _) = Nothing
 --			mapMap (_, _) = error ("Unexpected pattern in findAlphMajority")
 			
 --			(cn, backV, backD) = translate (fromCSP tstr str)
+
 			elts = elementsFromRels rels
 			
 			rels' = rels ++ map (\e -> Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts)
