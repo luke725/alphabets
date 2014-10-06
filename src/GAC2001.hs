@@ -3,7 +3,7 @@
 module GAC2001 where
 	import Data.Set(Set)
 	import qualified Data.Set as Set
-	import Data.Map(Map)
+	import Data.Map(Map, (!))
 	import qualified Data.Map as Map
 	import Control.Monad.State
 	import Prelude hiding (last)
@@ -17,7 +17,7 @@ module GAC2001 where
 	newtype Last v d = Last (Map ((v, d), Constraint v d) (Tuple d)) deriving (Show, Eq, Ord)
 	type GACState v d = State (Last v d, PossibleSolutions v d)
 	
-	type CSPData v d = Set (v, Constraint v d)
+	type CSPData v d = (Set (v, Constraint v d), Map v [(v, Constraint v d)])
 	
 	runGac :: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
@@ -31,8 +31,8 @@ module GAC2001 where
 		=> CSPData v d
 		-> GACState v d ()
 		
-	gac cspDataVD =
-		gacStep cspDataVD
+	gac (allCs, mapCs) =
+		gacStep allCs
 		where
 			gacStep :: Set (v, Constraint v d) -> GACState v d ()
 			gacStep q =
@@ -48,13 +48,18 @@ module GAC2001 where
 			addNeighbors (v, c) q =
 				foldl (\q' e -> Set.insert e q') q 
 				$ filter (\(v', c') -> v /= v' && c /= c' && elem v' (constraintVars c'))
-				$ Set.toList cspDataVD
+				$ (mapCs!v)
 			
 	cspData :: (Ord v, Ord d, Ord rname) => Structure rname v -> Structure rname d -> CSPData v d
 	cspData vstr dstr = 
-		Set.fromList 
-		$ concatMap (\c -> map (\v -> (v, c)) (constraintVars c)) 
-		$ allConstraints vstr dstr
+		(Set.fromList allCs, mapCs)
+		where
+			conPairs c = map (\v -> (v, c)) (constraintVars c)
+			allCs = concatMap conPairs $ allConstraints vstr dstr
+			mapCs = 
+				foldl (\m (v, vc) -> Map.insertWith (++) v [vc] m) Map.empty 
+				$ concatMap (\(v, c) -> map (\v' -> (v, (v',c))) (constraintVars c)) 
+				$ allCs
 				
 				
 			
