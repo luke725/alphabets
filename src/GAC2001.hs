@@ -118,14 +118,16 @@ module GAC2001 where
 		(last, sol) <- get
 		put (last, PS.setDomain v ds sol)
 		
-	allConstraints :: (Ord rname) => Structure rname v -> Structure rname d -> [Constraint v d]
+	allConstraints :: (Ord rname, Ord v, Ord d) => Structure rname v -> Structure rname d -> [Constraint v d]
 	allConstraints vstr dstr =
-		concatMap 
+		removeDupConstraints
+		$ concatMap 
 			(\rname -> 
 				map 
 					(\t -> Constraint (t, relationTuples dstr rname)) 
 					(Set.toList $ relationTuples vstr rname)) 
-			(relationNames $ signature vstr)
+		$ relationNames 
+		$ signature vstr
 	
 	meetsConstraint :: (Ord d) => Constraint v d -> Tuple d -> Bool
 	meetsConstraint (Constraint (_,ds)) t = Set.member t ds
@@ -146,4 +148,10 @@ module GAC2001 where
 				if c t 
 				then Just t 
 				else nextOkTuple c s (Just t)
+				
+	removeDupConstraints :: (Ord v, Ord d) => [Constraint v d] -> [Constraint v d]
+	removeDupConstraints cs =
+		map Constraint
+		$ Map.toList
+		$ foldl (\m (Constraint (vt, dts)) -> Map.insertWith Set.intersection vt dts m) Map.empty cs
 	
