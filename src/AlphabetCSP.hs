@@ -13,10 +13,8 @@ module AlphabetCSP where
 
 	import RelationalStructure
 	import Letter
---	import SAC3
---	import ConstraintNetwork
 	import Utils
-	import GSAC
+	import SAC3
 	
 	type Element = (Int, Permutation Int)
 

@@ -1,6 +1,6 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-module GSAC where
+module SAC3 where
 	import Data.Set(Set)
 	import qualified Data.Set as Set
 	import Data.Map(Map, (!))
@@ -11,7 +11,7 @@ module GSAC where
 	import PossibleSolutions (PossibleSolutions)
 	import qualified PossibleSolutions as PS
 	import RelationalStructure
-	import GAC2001
+	import AC2001
 	import Utils
 	
 	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 

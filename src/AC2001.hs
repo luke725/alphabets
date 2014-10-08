@@ -1,6 +1,6 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
-module GAC2001 where
+module AC2001 where
 	import Data.Set(Set)
 	import qualified Data.Set as Set
 	import Data.Map(Map, (!))
