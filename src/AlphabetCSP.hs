@@ -49,15 +49,16 @@ module AlphabetCSP where
 
 	findMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Maybe (Map (Tuple Element) Element)
 	findMajorityAutomorphisms atoms automorphisms =
-		case mm' of
-		 	Just m' ->
-		 		case mm'' of
-		 			Just m'' -> Just (Map.union m' m'')
-		 			Nothing -> Nothing 
-		 	Nothing -> Nothing
+--		case mm' of
+--		 	Just m' ->
+--		 		case mm'' of
+--		 			Just m'' -> Just (Map.union m' m'')
+--		 			Nothing -> Nothing 
+--		 	Nothing -> Nothing
+		mm'
 		where
 			mm' = findAlphMajority rels'
-			mm'' = findAlphMajority rels''		
+--			mm'' = findAlphMajority rels''		
 			maxAr = List.length atoms
 			rels = 
 				map
@@ -65,23 +66,23 @@ module AlphabetCSP where
 					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
 			rels' =
 				filter 
-					(\r -> 
+					(\r ->
 						Set.null 
 							(Set.intersection 
-								(Set.fromList [maxAr, maxAr - 1, maxAr - 2]) 
+								(Set.fromList [maxAr, maxAr - 1]) 
 								(eltArities r))
 					) 
 					rels
 			
-			rels'' =
-				filter
-					(\r ->
-						not $ Set.null
-							(Set.intersection
-								(Set.fromList [maxAr - 2, 1, 2])
-								(eltArities r))
-					)
-					rels
+--			rels'' =
+--				filter
+--					(\r ->
+--						not $ Set.null
+--							(Set.intersection
+--								(Set.fromList [maxAr - 2, 1, 2])
+--								(eltArities r))
+--					)
+--					rels
 					
 	ggElements :: GroupGens -> [Permutation Atom]
 	ggElements gg = SS.elts (map (PG.fromCycles) gg)
