@@ -18,7 +18,7 @@ module AlphabetCSP where
 	
 	type Element = (Int, Permutation Int)
 
-	type RName = (Either ([Permutation Atom], [[Atom]]) Element)
+	data RName = Original ([Permutation Atom], [[Atom]]) | Unary Element | SMatch Int deriving (Show, Ord, Eq)
 
 	type AStructure a = Structure RName a
 	
@@ -61,7 +61,7 @@ module AlphabetCSP where
 			maxAr = List.length atoms
 			rels = 
 				map
-					(\(as, (ar, s)) -> Relation (Left (automorphisms, as), ar, s)) 
+					(\(as, (ar, s)) -> Relation (Original (automorphisms, as), ar, s)) 
 					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
 			rels' =
 				filter 
@@ -116,7 +116,7 @@ module AlphabetCSP where
 				$ Map.toList
 				$ removeDup
 				$ Map.unions
-				$ map (\(i, gg) -> Map.mapKeys (\as -> Left ((ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg) (trace (show i) $ ggElements gg))
+				$ map (\(i, gg) -> Map.mapKeys (\as -> Original ((ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg) (trace (show i) $ ggElements gg))
 				$ zip [1..length ggList] ggList
 			rels' =
 				filter 
@@ -158,7 +158,7 @@ module AlphabetCSP where
 				$ Map.toList
 				$ removeDup
 				$ Map.unions
-				$ map (\autos -> Map.mapKeys (\as -> Left (autos, as)) $ relationsFromAutomorphisms atoms autos)
+				$ map (\autos -> Map.mapKeys (\as -> Original (autos, as)) $ relationsFromAutomorphisms atoms autos)
 				$ automorphismsList
 			rels' =
 				filter 
@@ -199,10 +199,14 @@ module AlphabetCSP where
 
 			elts = elementsFromRels rels
 			
-			rels' = rels ++ map (\e -> Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts)
+			rels' = 
+				rels 
+				++ map (\e -> Relation (Unary e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts) 
 			
 			str :: Structure RName Element
-			str = createStructure (sigFromRels rels') elts rels'
+			str = 
+				(flip $ foldl (\str' (i, p) -> addToRelation (SMatch i) (Arity 1) [Tuple [(i, p)]] str')) (Set.toList elts)
+				$ createStructure (sigFromRels rels') elts rels'
 			
 			tstr :: Structure RName (Tuple Element)
 			tstr =
@@ -212,10 +216,10 @@ module AlphabetCSP where
 				$ foldl 
 					(\tstr' e@(ar, _) -> 
 						addToRelation 
-							(Right e) (Arity 1)
+							(Unary e) (Arity 1)
 							[Tuple [Tuple [e, e]]]
 						$ addToRelation
-							(Right (one ar)) (Arity 1)
+							(Unary (one ar)) (Arity 1)
 							[Tuple [Tuple [e, one ar]], Tuple [Tuple [one ar, e]]] 
 							tstr'
 					) 
