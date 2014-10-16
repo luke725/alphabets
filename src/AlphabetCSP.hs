@@ -49,16 +49,8 @@ module AlphabetCSP where
 
 	findMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Maybe (Map (Tuple Element) Element)
 	findMajorityAutomorphisms atoms automorphisms =
---		case mm' of
---		 	Just m' ->
---		 		case mm'' of
---		 			Just m'' -> Just (Map.union m' m'')
---		 			Nothing -> Nothing 
---		 	Nothing -> Nothing
-		mm'
-		where
-			mm' = findAlphMajority rels'
---			mm'' = findAlphMajority rels''		
+		findAlphMajority rels'
+		where	
 			maxAr = List.length atoms
 			rels = 
 				map
@@ -73,44 +65,20 @@ module AlphabetCSP where
 								(eltArities r))
 					) 
 					rels
-			
---			rels'' =
---				filter
---					(\r ->
---						not $ Set.null
---							(Set.intersection
---								(Set.fromList [maxAr - 2, 1, 2])
---								(eltArities r))
---					)
---					rels
 					
 	ggElements :: GroupGens -> [Permutation Atom]
 	ggElements gg = SS.elts (map (PG.fromCycles) gg)
 	
 	ggAtoms :: GroupGens -> [Atom]
-	ggAtoms gg = 
---		if n < 4 then -- TODO: fix it
---			ggList ++ (map Atom [100..(103 - n)]) 
---		else
-		ggList
-		where
---			n = List.length ggList
-			ggList = List.nub (concat $ concat gg)
+	ggAtoms gg = List.nub (concat $ concat gg)
 					
 	findMajorityGG :: GroupGens -> Maybe (Map (Tuple Element) Element)
 	findMajorityGG gg = findMajorityAutomorphisms (ggAtoms gg) (ggElements gg)
 	
 	findMajorityGGMany :: [Atom] -> [GroupGens] -> Maybe (Map (Tuple Element) Element)
 	findMajorityGGMany _atoms ggList =
-		 case mm' of
-		 	Just m' ->
-		 		case mm'' of
-		 			Just m'' -> Just (Map.union m' m'')
-		 			Nothing -> Nothing 
-		 	Nothing -> Nothing
+		findAlphMajority rels'
 		where
-			mm' = findAlphMajority rels'
-			mm'' = findAlphMajority rels''
 			maxAr :: Int = List.maximum $ map (\gg -> List.length (ggAtoms gg)) ggList
 			rels =
 				map (\(k, (ar, s)) -> Relation (k, ar, s)) 
@@ -124,19 +92,9 @@ module AlphabetCSP where
 					(\r -> 
 						Set.null 
 							(Set.intersection 
-								(Set.fromList [maxAr, maxAr - 1, maxAr - 2]) 
+								(Set.fromList [maxAr, maxAr - 1]) 
 								(eltArities r))
 					) 
-					rels
-			
-			rels'' =
-				filter
-					(\r ->
-						not $ Set.null
-							(Set.intersection
-								(Set.fromList [maxAr - 2, 1, 2])
-								(eltArities r))
-					)
 					rels
 
 	checkMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Bool
@@ -144,15 +102,8 @@ module AlphabetCSP where
 					
 	findMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Maybe (Map (Tuple Element) Element)
 	findMajorityAutomorphismsMany atoms automorphismsList =
-		 case mm' of
-		 	Just m' ->
-		 		case mm'' of
-		 			Just m'' -> Just (Map.union m' m'')
-		 			Nothing -> Nothing 
-		 	Nothing -> Nothing
+			findAlphMajority rels'
 		where
-			mm' = findAlphMajority rels'
-			mm'' = findAlphMajority rels''
 			maxAr = List.length atoms
 			rels =
 				map (\(k, (ar, s)) -> Relation (k, ar, s)) 
@@ -166,19 +117,9 @@ module AlphabetCSP where
 					(\r -> 
 						Set.null 
 							(Set.intersection 
-								(Set.fromList [maxAr, maxAr - 1, maxAr - 2]) 
+								(Set.fromList [maxAr, maxAr - 1]) 
 								(eltArities r))
 					) 
-					rels
-			
-			rels'' =
-				filter
-					(\r ->
-						not $ Set.null
-							(Set.intersection
-								(Set.fromList [maxAr - 2, 1, 2])
-								(eltArities r))
-					)
 					rels
 
 	isConjClassRep :: Element -> Bool
@@ -187,17 +128,8 @@ module AlphabetCSP where
 
 	findAlphMajority :: [Relation RName Element] -> Maybe (Map (Tuple Element) Element)
 	findAlphMajority rels =
---		case findSAC3Solution cn of
---			Just m' -> Just (Map.fromList $ Maybe.catMaybes $ map mapMap $ map (\(v', d') -> (backV ! v', backD ! d')) $ Map.toList m')
---			Nothing -> Nothing
 		findSolutionFast tstr str 
 		where
---			mapMap (CSPElem v, CSPElem d) = Just (v, d)
---			mapMap (CSPTuple _, CSPTuple _) = Nothing
---			mapMap (_, _) = error ("Unexpected pattern in findAlphMajority")
-			
---			(cn, backV, backD) = translate (fromCSP tstr str)
-
 			elts = elementsFromRels rels
 			
 			rels' = 
@@ -211,7 +143,6 @@ module AlphabetCSP where
 			
 			tstr :: Structure RName (Tuple Element)
 			tstr =
---				filterStructure (\(Tuple [a, _]) -> isConjClassRep a)
 				conjClassOnly
 				$ resetElements 
 				$ foldl 
