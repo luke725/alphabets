@@ -36,6 +36,9 @@ module RelationalStructure where
 	
 	containsRelation :: (Ord rname) => Signature rname -> rname -> Bool
 	containsRelation (Signature arMap) rname = (Map.lookup rname arMap /= Nothing)
+	
+	getRelation :: (Ord rname) => Structure rname element -> rname -> Relation rname element
+	getRelation (Structure (_, _, relMap)) rname = relMap ! rname
 
 	
 	relationNames :: Signature rname -> [rname]
@@ -116,6 +119,12 @@ module RelationalStructure where
 --	expandSignature (Signature sigMap) str =
 		
 		
+	removeUnaryRelations :: (Ord rname, Ord element) => Structure rname element -> Structure rname element
+	removeUnaryRelations (Structure (Signature sigMap, els, relMap)) =
+		Structure (Signature sigMap', els, relMap')
+		where
+			sigMap' = Map.filter (\(Arity r) -> (r > 1)) sigMap
+			relMap' = Map.filter (\(Relation (_, (Arity r), _)) -> (r > 1)) relMap
 			
 			
 	renameRelations 
@@ -235,6 +244,18 @@ module RelationalStructure where
 		where
 			mapRel (Relation (rname, ar, tuples)) = 
 				Relation (rname, ar, Set.map (\(Tuple xs) -> Tuple $ map f xs) tuples)
+				
+--	rnameToInt :: (Ord element, Ord rname) => Structure rname element -> Structure rname Int
+--	rnameToInt str =
+--		renameRelations (\rname -> rnameMap!rname) str
+--		where
+--			(Signature sigMap) = structureSig str
+--			rnames = Map.keys sigMap
+--			rnameMap = Map.fromList $ zip rnames [1..List.length rnames]
+
+	sigMapToInt :: (Ord rname) => Signature rname -> Map rname Int
+	sigMapToInt (Signature sigMap) =
+		Map.fromList $ zip (Map.keys sigMap) [1..Map.size sigMap]
 
 	-- isomorphic structure where elements have type Int
 	intStructure
@@ -249,3 +270,4 @@ module RelationalStructure where
 			eltsZipList = zip [1..Set.size elts] $ Set.toList elts
 			map1 = Map.fromList eltsZipList
 			map2 = Map.fromList $ map (\(a, b) -> (b, a)) eltsZipList
+ 

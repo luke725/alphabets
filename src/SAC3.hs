@@ -14,19 +14,34 @@ module SAC3 where
 	import AC2001
 	import Utils
 	
+	applyUnaryConstraint :: (Ord v, Ord d, Ord rname) => Structure rname v -> Structure rname d -> PossibleSolutions v d
+	applyUnaryConstraint vstr dstr =
+		foldl 
+			(\sol (v, ds) ->  PS.setDomain v (Set.intersection ds (PS.domain sol v)) sol) 
+			(PS.full (structureElems vstr) (structureElems dstr)) 
+			constraints
+		where
+			(Signature sigMap) = structureSig vstr
+			constraints = 
+				concatMap (\(vs, ds) -> map (\v -> (v, ds)) (Set.toList vs))
+				$ map (\(Relation (_, _, vts), Relation (_, _, dts)) -> (Set.map (\(Tuple[v]) -> v) vts, Set.map (\(Tuple[d]) -> d) dts)) 
+				$ map (\rname -> (getRelation vstr rname, getRelation dstr rname)) $ Map.keys $ Map.filter (\(Arity r) -> (r == 1)) sigMap
+	
 	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
 		=> Structure rname v 
 		-> Structure rname d
 		-> Maybe (Map v d)
 		
 	findSolutionFast vstr dstr =
-		case findSolution vstrInt dstrInt of
+		case findSolution vstrInt' dstrInt' of
 			Just m -> Just $ Map.fromList $ map (\(vi, di) -> (vstrMap!vi, dstrMap!di)) $ Map.toList m
 			Nothing -> Nothing
 		where
+			vstrInt' = renameRelations (\rname -> sigMapInt!rname) vstrInt
+			dstrInt' = renameRelations (\rname -> sigMapInt!rname) dstrInt
+			sigMapInt = sigMapToInt (structureSig vstrInt)
 			(vstrInt, vstrMap, _) = intStructure vstr
 			(dstrInt, dstrMap, _) = intStructure dstr
-			
 	
 
 	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
@@ -35,12 +50,12 @@ module SAC3 where
 		-> Maybe (Map v d)
 		
 	findSolution vstr dstr =
-		case runGsac' vstr dstr cspDataVD (PS.full (structureElems vstr) (structureElems dstr)) of
+		case runGsac' vstr dstr cspDataVD (applyUnaryConstraint vstr dstr) of
 			Left m -> Just m
 			Right sol -> 
 				if PS.notEmpty sol
 				then 
-					case foldM setValue sol (Set.toList $ structureElems vstr) of
+					case foldM setValue sol (Set.toList $ structureElems vstr') of
 						Left (Just m) -> Just m
 						Left Nothing  -> Nothing
 						Right sol' -> Just (PS.anySolution sol')
@@ -52,14 +67,17 @@ module SAC3 where
 			
 			setValue' _ _ [] = Left Nothing
 			setValue' sol v (d:ds) =
-				case runGsac' vstr dstr cspDataVD (PS.setDomain v (Set.singleton d) sol) of
+				case runGsac' vstr' dstr' cspDataVD (PS.setDomain v (Set.singleton d) sol) of
 					Left m -> Left (Just m)
 					Right sol' ->
 						if PS.notEmpty sol'
 						then Right sol'
 						else setValue' sol v ds
 						
-			cspDataVD = cspData vstr dstr
+			cspDataVD = cspData vstr' dstr'
+			
+			vstr' = removeUnaryRelations vstr
+			dstr' = removeUnaryRelations dstr
 
 	runGsac
 		:: forall v d rname. (Ord v, Ord d, Ord rname) 

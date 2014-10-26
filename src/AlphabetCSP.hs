@@ -85,7 +85,7 @@ module AlphabetCSP where
 				
 	structureT :: Alphabet -> Structure RName Element
 	structureT alphabet = 
-		addTypeRels (structureFromRels (relationsFromAlphabet alphabet))
+		filterStructure (okType alphabet) $ addTypeRels (structureFromRels (relationsFromAlphabet alphabet))
 	
 	structureTu :: Alphabet -> Structure RName Element
 	structureTu alphabet = 
@@ -158,12 +158,16 @@ module AlphabetCSP where
 					
 	structureDoDirect :: Alphabet -> Structure RName (Tuple Element)
 	structureDoDirect alphabet =
-		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureDDirect alphabet)
-		
+		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureDDirect alphabet)		
 	
 	findMajorityAutomorphisms :: Alphabet -> Maybe (Map (Tuple Element) Element)
 	findMajorityAutomorphisms alphabet =	
-		findSolutionFast (structureDoDirect alphabet) (structureV alphabet)
+		if structureSig strDo == structureSig strV
+		then findSolutionFast strDo strV
+		else error "Signature mismatch"
+		where
+			strDo = structureDoDirect alphabet
+			strV = structureV alphabet
 					
 	ggElements :: GroupGens -> [Permutation Atom]
 	ggElements gg = SS.elts (map (PG.fromCycles) gg)
@@ -177,5 +181,4 @@ module AlphabetCSP where
 	isConjClassRep :: Element -> Bool
 	isConjClassRep (Element (i, p)) =
 		conjClassRep (Set.fromList [0..i-1]) p == p
-
 
