@@ -23,7 +23,7 @@ module UtilsTest (tests) where
 		coarbitrary (Tuple t) = coarbitrary t
 	
 	tests :: TestTree
-	tests = testGroup "Utils" [testCartesianPowerLength, testRemoveDupOne, testRemoveDupDouble, testPartitionsConcat, testPartitionsSimple, testPartitions2Concat, testPartitions2Simple, testPartitions2Comp, testAllTuples]
+	tests = testGroup "Utils" [testCartesianPowerLength, testRemoveDupOne, testRemoveDupDouble, testPartitionsConcat, testPartitionsSimple, testPartitions2Concat, testPartitions2Simple, testAllTuples]
 		
 	testCartesianPowerLength = 
 		QC.testProperty "cartesian power length"
@@ -58,20 +58,14 @@ module UtilsTest (tests) where
 		$ List.sort (allPartitions [1,2,3]) @?= List.sort [[[1,2,3]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]]]
 
 	testPartitions2Concat =
-		QC.testProperty "allPart2 and concat"
+		QC.testProperty "allPartAndPerms and concat"
 		$ (\(l :: [Int]) ->
-			length l < 7 QC.==> all (\p -> Set.fromList l == foldl (\s e -> Set.union s (Set.fromList e)) Set.empty p) (Set.toList $ allPart2 l)
+			length l < 7 QC.==> all (\p -> Set.fromList l == foldl (\s e -> Set.union s (Set.fromList e)) Set.empty p) (Set.toList $ allPartAndPerms l)
 		)
 		
 	testPartitions2Simple =
-		testCase "example for allPart2"
-		$ Set.map List.sort (allPart2 [1,2,3]) @?= Set.map List.sort (Set.fromList [[[1,2,3]], [[2,1,3]], [[2,3,1]], [[1,3,2]], [[3,1,2]], [[3,2,1]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]], [[2],[1,3]], [[2,1],[3]], [[2],[3,1]], [[1],[3,2]]])
-		
-	testPartitions2Comp =
-		QC.testProperty "allPart2 compare"
-		$ (\(l :: [Int]) ->
-			length l < 7 QC.==> (Set.map List.sort (allPart2 l) == Set.map List.sort (allPermPart l))
-		)
+		testCase "example for allPartAndPerms"
+		$ Set.map List.sort (allPartAndPerms [1,2,3]) @?= Set.map List.sort (Set.fromList [[[1,2,3]], [[2,1,3]], [[2,3,1]], [[1,3,2]], [[3,1,2]], [[3,2,1]], [[1],[2,3]], [[1],[2],[3]], [[1,2],[3]], [[2],[1,3]], [[2,1],[3]], [[2],[3,1]], [[1],[3,2]]])
 		
 	allTuples :: (Ord v) => [Set v] -> [Tuple v]
 	allTuples s =

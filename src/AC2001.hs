@@ -127,7 +127,7 @@ module AC2001 where
 					(\t -> Constraint (t, relationTuples dstr rname)) 
 					(Set.toList $ relationTuples vstr rname)) 
 		$ relationNames 
-		$ signature vstr
+		$ structureSig vstr
 	
 	meetsConstraint :: (Ord d) => Constraint v d -> Tuple d -> Bool
 	meetsConstraint (Constraint (_,ds)) t = Set.member t ds

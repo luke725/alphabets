@@ -35,12 +35,12 @@ module SAC3 where
 		-> Maybe (Map v d)
 		
 	findSolution vstr dstr =
-		case runGsac' vstr dstr cspDataVD (PS.full (strElems vstr) (strElems dstr)) of
+		case runGsac' vstr dstr cspDataVD (PS.full (structureElems vstr) (structureElems dstr)) of
 			Left m -> Just m
 			Right sol -> 
 				if PS.notEmpty sol
 				then 
-					case foldM setValue sol (Set.toList $ strElems vstr) of
+					case foldM setValue sol (Set.toList $ structureElems vstr) of
 						Left (Just m) -> Just m
 						Left Nothing  -> Nothing
 						Right sol' -> Just (PS.anySolution sol')
@@ -118,7 +118,7 @@ module SAC3 where
 				-> GACState v d (Either (Map v d) (Maybe (v, d), Map v (Set d)))
 				
 			buildBranch' m [] br =
-				if Map.size br == Set.size (strElems vstr) 
+				if Map.size br == Set.size (structureElems vstr) 
 				then return (Left br) 
 				else return (Right (Nothing, m))
 				

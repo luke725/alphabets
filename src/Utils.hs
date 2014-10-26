@@ -37,6 +37,7 @@ module Utils where
 		then Just a
 		else Nothing
 
+	-- cartesian product
 	cartesian :: (Ord a) => Set (Tuple a) -> Set (Tuple a) -> Set (Tuple a)
 	cartesian set1 set2 =
 		Set.unions (map (\(Tuple t1) -> Set.map (\(Tuple t2) -> Tuple (t1 ++ t2)) set2) (Set.toList set1))
@@ -68,23 +69,13 @@ module Utils where
 			allPartitions' (h:t) (ha:ta) sol =
 				allPartitions' t (h:ha:ta) sol
 				++ allPartitions' (h:t) [] (reverse (ha:ta) : sol)
-
-
-	allPermPart :: (Ord a) => [a] -> Set ([[a]])
-	allPermPart l =
-		Set.fromList 
-			(concatMap 
-				(\p -> map List.sort (allPartitions p)) 
-				(List.permutations l))
-				
-	partPreservesOrbits :: (Eq a) => [[a]] -> [[a]] -> Bool
-	partPreservesOrbits orbits part =
-		all (\p -> any (\o -> all (\pe -> List.elem pe o) p) orbits) part
 		
 	allPermPartPreserveOrbits :: (Ord a, Eq a) => [Permutation a] -> [a] -> Set ([[a]])
 	allPermPartPreserveOrbits g l =
-		Set.filter (partPreservesOrbits (PG.orbits g)) (allPart2 l)
-
+		Set.filter (partPreservesOrbits (PG.orbits g)) (allPartAndPerms l)
+		where
+			partPreservesOrbits orbits part =
+				all (\p -> any (\o -> all (\pe -> List.elem pe o) p) orbits) part
 				
 	allJust :: [Maybe a] -> Maybe [a]
 	allJust = Monad.sequence
@@ -118,22 +109,22 @@ module Utils where
 			
 	tr :: (Show a) => a -> a
 	tr a = trace (show a) a
-	
-	
-	allPartL :: [a] -> [[[a]]]
-	allPartL l = do
-		(le, nle) <- leaders
-		let n = length le
-		let leMap = Map.fromList (zip [1..n] le)
-		nleMap <- foldlM (\m e -> do {i <- [1..n]; return (Map.insertWith (++) i [e] m)}) Map.empty nle
-		let allMap = Map.mapWithKey (\i le' -> (le', Map.findWithDefault [] i nleMap)) leMap
-		let allVal = Map.elems allMap
-		mapM (\(le', nles) -> do {p <- List.permutations nles; return (le':p)}) allVal	
+
+		
+	-- produce all partitions and every permutation in each partition	
+	allPartAndPerms :: (Ord a) => [a] -> Set [[a]]
+	allPartAndPerms l = Set.fromList (allPartAndPermsList l)
 		where
-			leaders = foldlM (\(le, nle) e -> [(e:le, nle), (le, e:nle)]) ([], []) l
-			
-	allPart2 :: (Ord a) => [a] -> Set [[a]]
-	allPart2 l = Set.fromList (allPartL l)
+				allPartAndPermsList :: [a] -> [[[a]]]
+				allPartAndPermsList l' = do
+					(le, nle) <- foldlM (\(le, nle) e -> [(e:le, nle), (le, e:nle)]) ([], []) l'
+					let n = length le
+					let leMap = Map.fromList (zip [1..n] le)
+					nleMap <- foldlM (\m e -> do {i <- [1..n]; return (Map.insertWith (++) i [e] m)}) Map.empty nle
+					let allMap = Map.mapWithKey (\i le' -> (le', Map.findWithDefault [] i nleMap)) leMap
+					let allVal = Map.elems allMap
+					mapM (\(le', nles) -> do {p <- List.permutations nles; return (le':p)}) allVal	
+
 	
 	firstTuple :: [Set v] -> Maybe (Tuple v)
 	firstTuple [] = Just (Tuple [])
