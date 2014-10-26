@@ -44,4 +44,4 @@ module LetterTest (tests) where
 	
 	testLetterAutomorphisms =
 		QC.testProperty "letter automorphisms"
-		$ (\(l :: Letter) -> all (\a -> isAutomorphism l a) (letterAutomorphisms l))
+		$ (\(l :: Letter) -> all (\a -> isAutomorphism l a) (snd $ letterAutomorphisms l))

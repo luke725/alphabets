@@ -18,7 +18,7 @@ module AlphabetCSP where
 	
 	type Element = (Int, Permutation Int)
 
-	data RName = Original ([Permutation Atom], [[Atom]]) | Unary Element | SMatch Int deriving (Show, Ord, Eq)
+	data RName = Original (Automorphisms, Partition) | Unary Element | SMatch Int deriving (Show, Ord, Eq)
 
 	type AStructure a = Structure RName a
 	
@@ -42,20 +42,20 @@ module AlphabetCSP where
 	
 	findMajorityLetter :: Letter -> Maybe (Map (Tuple Element) Element)
 	findMajorityLetter letter =	
-		findMajorityAutomorphisms (Set.toList (letterAtoms letter)) (letterAutomorphisms letter)
+		findMajorityAutomorphisms (letterAutomorphisms letter)
 
-	checkMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Bool
-	checkMajorityAutomorphisms atoms automorphisms = (findMajorityAutomorphisms atoms automorphisms /= Nothing)
+	checkMajorityAutomorphisms :: Automorphisms -> Bool
+	checkMajorityAutomorphisms automorphisms = (findMajorityAutomorphisms automorphisms /= Nothing)
 
-	findMajorityAutomorphisms :: [Atom] -> [Permutation Atom] -> Maybe (Map (Tuple Element) Element)
-	findMajorityAutomorphisms atoms automorphisms =
+	findMajorityAutomorphisms :: Automorphisms -> Maybe (Map (Tuple Element) Element)
+	findMajorityAutomorphisms automorphisms =
 		findAlphMajority rels'
 		where	
-			maxAr = List.length atoms
+			maxAr = List.length $ fst automorphisms
 			rels = 
 				map
 					(\(as, (ar, s)) -> Relation (Original (automorphisms, as), ar, s)) 
-					(Map.toList (relationsFromAutomorphisms atoms automorphisms))
+					(Map.toList (relationsFromAutomorphisms automorphisms))
 			rels' =
 				filter 
 					(\r ->
@@ -73,7 +73,7 @@ module AlphabetCSP where
 	ggAtoms gg = List.nub (concat $ concat gg)
 					
 	findMajorityGG :: GroupGens -> Maybe (Map (Tuple Element) Element)
-	findMajorityGG gg = findMajorityAutomorphisms (ggAtoms gg) (ggElements gg)
+	findMajorityGG gg = findMajorityAutomorphisms (ggAtoms gg, ggElements gg)
 	
 	findMajorityGGMany :: [Atom] -> [GroupGens] -> Maybe (Map (Tuple Element) Element)
 	findMajorityGGMany _atoms ggList =
@@ -85,7 +85,7 @@ module AlphabetCSP where
 				$ Map.toList
 				$ removeDup
 				$ Map.unions
-				$ map (\(i, gg) -> Map.mapKeys (\as -> Original ((ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg) (trace (show i) $ ggElements gg))
+				$ map (\(i, gg) -> Map.mapKeys (\as -> Original ((ggAtoms gg, ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg, trace (show i) $ ggElements gg))
 				$ zip [1..length ggList] ggList
 			rels' =
 				filter 
@@ -97,20 +97,20 @@ module AlphabetCSP where
 					) 
 					rels
 
-	checkMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Bool
-	checkMajorityAutomorphismsMany atoms automorphismsList = (findMajorityAutomorphismsMany atoms automorphismsList /= Nothing)
+	checkMajorityAutomorphismsMany :: [Automorphisms] -> Bool
+	checkMajorityAutomorphismsMany automorphismsList = (findMajorityAutomorphismsMany automorphismsList /= Nothing)
 					
-	findMajorityAutomorphismsMany :: [Atom] -> [[Permutation Atom]] -> Maybe (Map (Tuple Element) Element)
-	findMajorityAutomorphismsMany atoms automorphismsList =
+	findMajorityAutomorphismsMany :: [Automorphisms] -> Maybe (Map (Tuple Element) Element)
+	findMajorityAutomorphismsMany automorphismsList =
 			findAlphMajority rels'
 		where
-			maxAr = List.length atoms
+			maxAr = List.length $ fst $ head automorphismsList
 			rels =
 				map (\(k, (ar, s)) -> Relation (k, ar, s)) 
 				$ Map.toList
 				$ removeDup
 				$ Map.unions
-				$ map (\autos -> Map.mapKeys (\as -> Original (autos, as)) $ relationsFromAutomorphisms atoms autos)
+				$ map (\autos -> Map.mapKeys (\as -> Original (autos, as)) $ relationsFromAutomorphisms autos)
 				$ automorphismsList
 			rels' =
 				filter 

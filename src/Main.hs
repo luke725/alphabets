@@ -17,10 +17,10 @@ import Utils
 		
 runAll :: [Atom] -> [GroupGens] -> [(GroupGens, Bool)]
 runAll _atoms sl =
-	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms (ggAtoms cl) (ggElements cl))) sl)
+	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms (ggAtoms cl, ggElements cl))) sl)
 	
 run1 :: GroupGens -> (GroupGens, Bool)
-run1 cl = showRes (cl, checkMajorityAutomorphisms (ggAtoms cl) (ggElements cl))
+run1 cl = showRes (cl, checkMajorityAutomorphisms (ggAtoms cl, ggElements cl))
 	
 myParMap :: (a -> b) -> [a] -> Eval [b]
 myParMap _ [] = return []

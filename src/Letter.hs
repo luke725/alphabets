@@ -19,6 +19,8 @@ module Letter where
 		
 	type Partition = [[Atom]]
 	
+	type Automorphisms = ([Atom], [Permutation Atom])
+	
 	data Letter = LSet (Set Letter) | LAtom Atom deriving (Show, Ord, Eq)
 	
 	
@@ -39,9 +41,9 @@ module Letter where
 			applyAutomorphism f' (LAtom a) = LAtom (a .^ f')
 			applyAutomorphism f' (LSet set) = LSet (Set.map (applyAutomorphism f') set)
 	
-	letterAutomorphisms :: Letter -> [Permutation Atom]
+	letterAutomorphisms :: Letter -> Automorphisms
 	letterAutomorphisms letter =
-		filter (isAutomorphism letter) allPermutations
+		(atoms, filter (isAutomorphism letter) allPermutations)
 		where
 			atoms = Set.toList (letterAtoms letter)
 			allPermutations =
@@ -73,23 +75,22 @@ module Letter where
 					
 	letterRelations :: Letter -> Map Partition (Arity, Set (Tuple (Int, Permutation Int)))
 	letterRelations letter =
-		relationsFromAutomorphisms (Set.toList (letterAtoms letter)) (letterAutomorphisms letter)
+		relationsFromAutomorphisms (letterAutomorphisms letter)
 			
 					
 	relationsFromAutomorphisms 
-		:: [Atom] 
-		-> [Permutation Atom] 
+		:: Automorphisms
 		-> Map [[Atom]] (Arity, Set (Tuple (Int, Permutation Int)))
 
-	relationsFromAutomorphisms atoms automorphisms =
+	relationsFromAutomorphisms (atoms, perms) =
 		removeDup
 		$ Map.fromList
 		$ map
 			(\part -> 
 				(part, 
 				(Arity $ length $ filter (\l -> length l > 1) part,
-				 Set.fromList (Maybe.mapMaybe (translateAutomorphism part) automorphisms)))
+				 Set.fromList (Maybe.mapMaybe (translateAutomorphism part) perms)))
 			)
-		$ Set.toList (allPermPartPreserveOrbits automorphisms atoms)
+		$ Set.toList (allPermPartPreserveOrbits perms atoms)
 
 
