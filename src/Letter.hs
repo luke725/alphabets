@@ -3,7 +3,7 @@
 module Letter where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
-	import Data.Map (Map)
+	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
 	import qualified Data.List as List
 	import qualified Data.Maybe as Maybe
@@ -20,6 +20,8 @@ module Letter where
 	type Partition = [[Atom]]
 	
 	type Automorphisms = ([Atom], [Permutation Atom])
+
+	type Alphabet = [Automorphisms]
 	
 	data Letter = LSet (Set Letter) | LAtom Atom deriving (Show, Ord, Eq)
 	
@@ -50,6 +52,36 @@ module Letter where
 				map 
 					(\perm -> PermutationGroup.fromPairs (zip atoms perm)) 
 					(List.permutations atoms)
+					
+	letterAutomorphismGroup :: Letter -> Automorphisms
+	letterAutomorphismGroup letter =
+		(atoms, filter (isAutomorphism letter) allPermutations)
+		where
+			atoms = Set.toList (letterAtoms letter)
+			allPermutations =
+				map 
+					(\perm -> PermutationGroup.fromPairs (zip atoms perm)) 
+					(List.permutations atoms)
+					
+	mapAtoms :: (Atom -> Atom) -> Letter -> Letter
+	mapAtoms f (LAtom a) = LAtom (f a)
+	mapAtoms f (LSet set) = LSet (Set.map (mapAtoms f) set)
+	
+	resetAtoms :: Letter -> Letter
+	resetAtoms letter = 
+		mapAtoms (\a -> atomMap!a) letter
+		where
+			atomList = Set.toList $ letterAtoms letter
+			atomMap = Map.fromList $ zip atomList (map Atom [1..List.length atomList])
+			
+	alphabetFromLetters :: [Letter] -> Alphabet
+	alphabetFromLetters letters = 
+		map letterAutomorphismGroup letters
+			
+			
+	dimension :: Alphabet -> Int
+	dimension alph =
+		maximum $ map (\(atoms, _) -> List.length atoms) alph
 				
 			
 	automorphismPreservesPartition :: Partition -> Permutation Atom -> Bool
@@ -80,7 +112,7 @@ module Letter where
 					
 	relationsFromAutomorphisms 
 		:: Automorphisms
-		-> Map [[Atom]] (Arity, Set (Tuple (Int, Permutation Int)))
+		-> Map Partition (Arity, Set (Tuple (Int, Permutation Int)))
 
 	relationsFromAutomorphisms (atoms, perms) =
 		removeDup
@@ -92,5 +124,6 @@ module Letter where
 				 Set.fromList (Maybe.mapMaybe (translateAutomorphism part) perms)))
 			)
 		$ Set.toList (allPermPartPreserveOrbits perms atoms)
+
 
 

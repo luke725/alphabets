@@ -46,11 +46,19 @@ module AlphabetCSP where
 
 	checkMajorityAutomorphisms :: Automorphisms -> Bool
 	checkMajorityAutomorphisms automorphisms = (findMajorityAutomorphisms automorphisms /= Nothing)
-
+	
+	relationsFromAlphabet :: Alphabet -> [Relation RName Element]
+	relationsFromAlphabet  alphabet =
+		concatMap relsFromAutoGroup alphabet
+		where
+			relsFromAutoGroup (atoms, perm) =
+				map (\(as, (ar, s)) -> Relation (Original ((atoms, perm), as), ar, s))
+				$ Map.toList (relationsFromAutomorphisms (atoms, perm))
+	
 	findMajorityAutomorphisms :: Automorphisms -> Maybe (Map (Tuple Element) Element)
 	findMajorityAutomorphisms automorphisms =
 		findAlphMajority rels'
-		where	
+		where
 			maxAr = List.length $ fst automorphisms
 			rels = 
 				map
