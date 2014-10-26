@@ -6,8 +6,8 @@ import System.Exit (ExitCode(..), exitWith)
 import System.Console.GetOpt
 import System.IO
 
-import qualified Data.Map as Map
-import qualified Control.Monad as Monad
+--import qualified Data.Map as Map
+--import qualified Control.Monad as Monad
 import Letter
 import AlphabetCSP
 
@@ -34,26 +34,26 @@ run n = do
 	putStrLn $ show $ runAll (map Atom [1..n]) (s !! (n-1))
 	
 	
-allTogether :: String -> Int -> IO ()	
-allTogether path k = do
-	let n = 8
-	rs <- results8 path
-	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
-	putStrLn (show $ length standard)
-	let b = findMajorityGGMany (map Atom [1..n]) standard
-	case b of 
-		Nothing -> putStrLn "Nothing"
-		Just m ->
-			Monad.foldM (\() (Tuple [x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)
+--allTogether :: String -> Int -> IO ()	
+--allTogether path k = do
+--	let n = 8
+--	rs <- results8 path
+--	let standard = take k $ map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
+--	putStrLn (show $ length standard)
+--	let b = findMajorityGGMany (map Atom [1..n]) standard
+--	case b of 
+--		Nothing -> putStrLn "Nothing"
+--		Just m ->
+--			Monad.foldM (\() (Tuple [x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)
 
 
-all5 :: IO ()	
-all5 = do
-	let b = findMajorityGGMany (map Atom [1..5]) s5
-	case b of 
-		Nothing -> putStrLn "Nothing"
-		Just m ->
-			Monad.foldM (\() (Tuple [x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)	
+--all5 :: IO ()	
+--all5 = do
+--	let b = findMajorityGGMany (map Atom [1..5]) s5
+--	case b of 
+--		Nothing -> putStrLn "Nothing"
+--		Just m ->
+--			Monad.foldM (\() (Tuple [x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)	
 	
 	
 runPart :: String -> IO ()	
@@ -82,13 +82,13 @@ main = do
 		([Path path], comm, []) ->
 			case comm of
 				["runPart"] -> runPart path
-				["all", ks] -> allTogether path (read ks)
+--				["all", ks] -> allTogether path (read ks)
 				_ -> dump info >> exitWith (ExitFailure 1)
 		([], comm, []) ->
 			case comm of
 				["run", ns] -> run (read ns)
 				["run1"] -> putStrLn $ show $ run1 $ getGroupGens [[[3,4]],[[5,6]],[[3,5],[4,6]],[[1,2]]]
-				["all5"] -> all5
+--				["all5"] -> all5
 				_ -> dump info >> exitWith (ExitFailure 1)
 		(_, _, errs) ->
 			dump (concat errs ++ info) >> exitWith (ExitFailure 1)

@@ -25,6 +25,7 @@ module Letter where
 	
 	data Letter = LSet (Set Letter) | LAtom Atom deriving (Show, Ord, Eq)
 	
+	newtype Element = Element (Int, Permutation Int) deriving (Show, Ord, Eq)
 	
 	setL :: [Letter] -> Letter
 	setL letters = LSet (Set.fromList letters)
@@ -90,29 +91,29 @@ module Letter where
 		where
 			partSets = map Set.fromList part	
 	
-	translateAutomorphism :: Partition -> Permutation Atom -> Maybe (Tuple (Int, Permutation Int))
+	translateAutomorphism :: Partition -> Permutation Atom -> Maybe (Tuple Element)
 	translateAutomorphism part f = 
 		case allJust (map permute part) of
-			Just t  -> Just $ Tuple $ filter (\(i, _) -> i > 1) t
+			Just t  -> Just $ Tuple $ filter (\(Element (i, _)) -> i > 1) t
 			Nothing -> Nothing
 		where
-			permute :: [Atom] -> Maybe (Int, Permutation Int)
+			permute :: [Atom] -> Maybe Element
 			permute p =
 				case allJust (map (\e -> List.elemIndex e pp) p) of
-					Just l  -> Just (List.length l, PermutationGroup.fromList l)
+					Just l  -> Just (Element (List.length l, PermutationGroup.fromList l))
 					Nothing -> Nothing
 				where
 					pp = map (\a -> a .^ f) p
 
 					
-	letterRelations :: Letter -> Map Partition (Arity, Set (Tuple (Int, Permutation Int)))
+	letterRelations :: Letter -> Map Partition (Arity, Set (Tuple Element))
 	letterRelations letter =
 		relationsFromAutomorphisms (letterAutomorphisms letter)
 			
 					
 	relationsFromAutomorphisms 
 		:: Automorphisms
-		-> Map Partition (Arity, Set (Tuple (Int, Permutation Int)))
+		-> Map Partition (Arity, Set (Tuple Element))
 
 	relationsFromAutomorphisms (atoms, perms) =
 		removeDup

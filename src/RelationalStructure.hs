@@ -71,6 +71,9 @@ module RelationalStructure where
 				$ map (\(Relation (rname', arity', elts')) -> (rname', Relation (rname', arity', elts'))) 
 				$ rels
 		
+	structureFromRels :: (Ord rname, Ord element) => [Relation rname element] -> Structure rname element
+	structureFromRels rels =
+		createStructure (sigFromRels rels) (elementsFromRels rels) rels
 		
 	structureElems :: Structure rname element -> Set element
 	structureElems (Structure (_, elts, _)) = elts
@@ -99,6 +102,20 @@ module RelationalStructure where
 			Relation (rname, ar, _) = rel
 			sig' = Signature $ Map.insert rname ar sigMap
 			rels' = Map.insert rname rel rels
+			
+	addRelations
+		:: (Ord rname, Ord element) 
+		=> [Relation rname element]
+		-> Structure rname element
+		-> Structure rname element
+		
+	addRelations rels str =
+		foldl (\str' rel -> addRelation rel str') str rels
+		
+--	expandSignature :: (Ord rname, Ord element) => Signature rname -> Structure rname element -> Structure rname element
+--	expandSignature (Signature sigMap) str =
+		
+		
 			
 			
 	renameRelations 
@@ -212,19 +229,23 @@ module RelationalStructure where
 			rels' = Map.map transform_relation rels
 
 
+	mapStructure :: (Ord e1, Ord e2, Ord rname) => (e1 -> e2) -> Structure rname e1 -> Structure rname e2
+	mapStructure f (Structure (sig, elts, rels)) =
+		Structure (sig, Set.map f elts, Map.map mapRel rels)
+		where
+			mapRel (Relation (rname, ar, tuples)) = 
+				Relation (rname, ar, Set.map (\(Tuple xs) -> Tuple $ map f xs) tuples)
+
 	-- isomorphic structure where elements have type Int
 	intStructure
 		:: forall element rname. (Ord element, Ord rname)
 		=> Structure rname element
 		-> (Structure rname Int, Map Int element, Map element Int)
 		
-	intStructure (Structure (sig, elts, rels)) =
-		(Structure (sig, nelts, nrels), map1, map2)
+	intStructure str =
+		(mapStructure (\e -> map2!e) str, map1, map2)
 		where
+			elts = structureElems str
 			eltsZipList = zip [1..Set.size elts] $ Set.toList elts
 			map1 = Map.fromList eltsZipList
 			map2 = Map.fromList $ map (\(a, b) -> (b, a)) eltsZipList
-			nelts = Set.fromList [1..Set.size elts]
-			mapRel (Relation (rname, ar, tuples)) = 
-				Relation (rname, ar, Set.map (\(Tuple xs) -> Tuple $ map (\x -> map2!x) xs) tuples)
-			nrels = Map.map mapRel rels

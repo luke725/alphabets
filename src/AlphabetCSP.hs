@@ -1,13 +1,13 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
 module AlphabetCSP where
-	import Debug.Trace
+--	import Debug.Trace
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
 	import Data.Map (Map)
 	import qualified Data.Map as Map
-	import Math.Algebra.Group.PermutationGroup(Permutation, (~^))
+	import Math.Algebra.Group.PermutationGroup(Permutation)
 	import qualified Math.Algebra.Group.PermutationGroup as PG
 	import qualified Math.Algebra.Group.SchreierSims as SS
 
@@ -15,20 +15,37 @@ module AlphabetCSP where
 	import Letter
 	import Utils
 	import SAC3
-	
-	type Element = (Int, Permutation Int)
 
-	data RName = Original (Automorphisms, Partition) | Unary Element | SMatch Int deriving (Show, Ord, Eq)
+	data RName = Original (Automorphisms, Partition) | Unary Element | EType ElemType deriving (Show, Ord, Eq)
 
 	type AStructure a = Structure RName a
 	
+	data ElemType = CorrectType Int | ErrorType deriving (Show, Ord, Eq)
+	
+	class Typed a where
+		elemType :: a -> ElemType
+		
+	instance Typed (Element) where
+		elemType (Element (s, _)) = (CorrectType s)
+		
+	instance (Typed a) => Typed (Tuple a) where
+		elemType (Tuple []) = ErrorType
+		elemType (Tuple [x]) = elemType x
+		elemType (Tuple (x:(h:t))) =
+			if elemType x == elemType (Tuple (h:t))
+			then elemType x
+			else ErrorType
+	
 	type GroupGens = [[[Atom]]]
 
-	one :: Int -> Element
-	one r = (r, PG.p [])
+	one :: Element -> Element
+	one (Element (r, _)) = Element (r, PG.p [])
+	
+	isNeutral :: Element -> Bool
+	isNeutral e = (e == one e)
 	
 	eltArity :: Element -> Int
-	eltArity (ar, _) = ar
+	eltArity (Element (ar, _)) = ar
 	
 	eltArities :: Relation RName Element -> Set Int
 	eltArities (Relation (_, _, ts)) = 
@@ -42,37 +59,111 @@ module AlphabetCSP where
 	
 	findMajorityLetter :: Letter -> Maybe (Map (Tuple Element) Element)
 	findMajorityLetter letter =	
-		findMajorityAutomorphisms (letterAutomorphisms letter)
+		findMajorityAutomorphisms [letterAutomorphisms letter]
 
 	checkMajorityAutomorphisms :: Automorphisms -> Bool
-	checkMajorityAutomorphisms automorphisms = (findMajorityAutomorphisms automorphisms /= Nothing)
+	checkMajorityAutomorphisms automorphisms = (findMajorityAutomorphisms [automorphisms] /= Nothing)
 	
 	relationsFromAlphabet :: Alphabet -> [Relation RName Element]
-	relationsFromAlphabet  alphabet =
+	relationsFromAlphabet alphabet =
 		concatMap relsFromAutoGroup alphabet
 		where
 			relsFromAutoGroup (atoms, perm) =
 				map (\(as, (ar, s)) -> Relation (Original ((atoms, perm), as), ar, s))
 				$ Map.toList (relationsFromAutomorphisms (atoms, perm))
-	
-	findMajorityAutomorphisms :: Automorphisms -> Maybe (Map (Tuple Element) Element)
-	findMajorityAutomorphisms automorphisms =
-		findAlphMajority rels'
+				
+	addTypeRels :: Structure RName Element -> Structure RName Element
+	addTypeRels str =
+		addRelations (map (\(t, s) -> Relation (EType t, Arity 1, Set.map (\e -> Tuple [e]) s)) $ Map.toList typeMap) str
 		where
-			maxAr = List.length $ fst automorphisms
-			rels = 
-				map
-					(\(as, (ar, s)) -> Relation (Original (automorphisms, as), ar, s)) 
-					(Map.toList (relationsFromAutomorphisms automorphisms))
-			rels' =
-				filter 
-					(\r ->
-						Set.null 
-							(Set.intersection 
-								(Set.fromList [maxAr, maxAr - 1]) 
-								(eltArities r))
-					) 
-					rels
+			typeMap :: Map ElemType (Set Element)
+			typeMap =
+				foldl 
+					(\m e -> Map.insertWith Set.union (elemType e) (Set.singleton e) m) 
+					Map.empty 
+					(Set.toList $ structureElems str)
+				
+	structureT :: Alphabet -> Structure RName Element
+	structureT alphabet = 
+		addTypeRels (structureFromRels (relationsFromAlphabet alphabet))
+	
+	structureTu :: Alphabet -> Structure RName Element
+	structureTu alphabet = 
+		addRelations 
+			(map (\e -> Relation (Unary e, Arity 1, Set.singleton (Tuple [e]))) $ Set.toList $ structureElems t)
+			t
+		where
+			t = structureT alphabet
+			
+	structureT3u :: Alphabet -> Structure RName (Tuple Element)
+	structureT3u alphabet =
+		addRelations (map u elems) t3
+		where
+			t = structureT alphabet
+			elems = Set.toList $ structureElems t
+			t3 = structPower t 3
+			u e = 
+				Relation 
+					(Unary e, 
+					 Arity 1, 
+					 Set.fromList $ concatMap (\a -> map (\x -> Tuple [x]) [Tuple [a, e, e], Tuple [e, a, e], Tuple [e, e, a]]) elems)
+		
+	structureM :: Alphabet -> Structure RName (Tuple Element)
+	structureM alphabet =
+		filterStructure (\e -> elemType e /= ErrorType) (structureT3u alphabet)
+	
+	okType :: (Typed e) => Alphabet -> e -> Bool
+	okType alphabet e = 
+		case elemType e of
+			CorrectType t -> (t < dimension alphabet - 1)
+			ErrorType     -> False	
+			 
+	structureV :: Alphabet -> Structure RName Element
+	structureV alphabet =
+		filterStructure (okType alphabet) (structureTu alphabet)
+		
+	structureM' :: Alphabet -> Structure RName (Tuple Element)
+	structureM' alphabet =
+		filterStructure (okType alphabet) (structureM alphabet)
+		
+	structureM'' :: Alphabet -> Structure RName (Tuple Element)
+	structureM'' alphabet =
+		filterStructure (\(Tuple [x,_,_]) -> isNeutral x) (structureM' alphabet)
+		
+	structureD :: Alphabet -> Structure RName (Tuple Element)
+	structureD alphabet =
+		mapStructure (\(Tuple [_,y,z]) -> (Tuple [y, z])) (structureM'' alphabet)
+		
+	structureDo :: Alphabet -> Structure RName (Tuple Element)
+	structureDo alphabet =
+		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureD alphabet)
+		
+	structureDDirect :: Alphabet -> Structure RName (Tuple Element)
+	structureDDirect alphabet =
+			addRelations (map u elems) t2
+		where
+			t = filterStructure (okType alphabet) $ structureT alphabet
+			elems = Set.toList $ structureElems t
+			t2 = filterStructure (okType alphabet) $ structPower t 2
+			u e =
+				if isNeutral e
+				then
+					Relation 
+						(Unary e, 
+						 Arity 1, 
+						 Set.fromList 
+						 	(concatMap (\a -> [Tuple[Tuple [a, e]], Tuple[Tuple [e, a]]]) elems))
+				else
+					Relation (Unary e, Arity 1, Set.fromList [Tuple[Tuple [e, e]]])
+					
+	structureDoDirect :: Alphabet -> Structure RName (Tuple Element)
+	structureDoDirect alphabet =
+		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureDDirect alphabet)
+		
+	
+	findMajorityAutomorphisms :: Alphabet -> Maybe (Map (Tuple Element) Element)
+	findMajorityAutomorphisms alphabet =	
+		findSolutionFast (structureDoDirect alphabet) (structureV alphabet)
 					
 	ggElements :: GroupGens -> [Permutation Atom]
 	ggElements gg = SS.elts (map (PG.fromCycles) gg)
@@ -81,102 +172,10 @@ module AlphabetCSP where
 	ggAtoms gg = List.nub (concat $ concat gg)
 					
 	findMajorityGG :: GroupGens -> Maybe (Map (Tuple Element) Element)
-	findMajorityGG gg = findMajorityAutomorphisms (ggAtoms gg, ggElements gg)
-	
-	findMajorityGGMany :: [Atom] -> [GroupGens] -> Maybe (Map (Tuple Element) Element)
-	findMajorityGGMany _atoms ggList =
-		findAlphMajority rels'
-		where
-			maxAr :: Int = List.maximum $ map (\gg -> List.length (ggAtoms gg)) ggList
-			rels =
-				map (\(k, (ar, s)) -> Relation (k, ar, s)) 
-				$ Map.toList
-				$ removeDup
-				$ Map.unions
-				$ map (\(i, gg) -> Map.mapKeys (\as -> Original ((ggAtoms gg, ggElements gg), as)) $ relationsFromAutomorphisms (ggAtoms gg, trace (show i) $ ggElements gg))
-				$ zip [1..length ggList] ggList
-			rels' =
-				filter 
-					(\r -> 
-						Set.null 
-							(Set.intersection 
-								(Set.fromList [maxAr, maxAr - 1]) 
-								(eltArities r))
-					) 
-					rels
-
-	checkMajorityAutomorphismsMany :: [Automorphisms] -> Bool
-	checkMajorityAutomorphismsMany automorphismsList = (findMajorityAutomorphismsMany automorphismsList /= Nothing)
-					
-	findMajorityAutomorphismsMany :: [Automorphisms] -> Maybe (Map (Tuple Element) Element)
-	findMajorityAutomorphismsMany automorphismsList =
-			findAlphMajority rels'
-		where
-			maxAr = List.length $ fst $ head automorphismsList
-			rels =
-				map (\(k, (ar, s)) -> Relation (k, ar, s)) 
-				$ Map.toList
-				$ removeDup
-				$ Map.unions
-				$ map (\autos -> Map.mapKeys (\as -> Original (autos, as)) $ relationsFromAutomorphisms autos)
-				$ automorphismsList
-			rels' =
-				filter 
-					(\r -> 
-						Set.null 
-							(Set.intersection 
-								(Set.fromList [maxAr, maxAr - 1]) 
-								(eltArities r))
-					) 
-					rels
+	findMajorityGG gg = findMajorityAutomorphisms [(ggAtoms gg, ggElements gg)]
 
 	isConjClassRep :: Element -> Bool
-	isConjClassRep (i, p) =
+	isConjClassRep (Element (i, p)) =
 		conjClassRep (Set.fromList [0..i-1]) p == p
 
-	findAlphMajority :: [Relation RName Element] -> Maybe (Map (Tuple Element) Element)
-	findAlphMajority rels =
-		findSolutionFast tstr str 
-		where
-			elts = elementsFromRels rels
-			
-			rels' = 
-				rels 
-				++ map (\e -> Relation (Unary e, Arity 1, Set.singleton (Tuple [e]))) (Set.toList elts) 
-			
-			str :: Structure RName Element
-			str = 
-				(flip $ foldl (\str' (i, p) -> addToRelation (SMatch i) (Arity 1) [Tuple [(i, p)]] str')) (Set.toList elts)
-				$ createStructure (sigFromRels rels') elts rels'
-			
-			tstr :: Structure RName (Tuple Element)
-			tstr =
-				conjClassOnly
-				$ resetElements 
-				$ foldl 
-					(\tstr' e@(ar, _) -> 
-						addToRelation 
-							(Unary e) (Arity 1)
-							[Tuple [Tuple [e, e]]]
-						$ addToRelation
-							(Unary (one ar)) (Arity 1)
-							[Tuple [Tuple [e, one ar]], Tuple [Tuple [one ar, e]]] 
-							tstr'
-					) 
-					(structPower str 2) 
-					(Set.toList elts)
-					
-			conjClassOnly :: Structure RName (Tuple Element) -> Structure RName (Tuple Element)
-			conjClassOnly (Structure (sig, elems, relMap)) =
-				substructure (Structure (sig, elems, relMap)) (classReps elems)
-				
-			classReps :: Set (Tuple Element) -> Set (Tuple Element)
-			classReps elems =
-				fst $ foldl (\(cr, ce) e -> if Set.member e ce then (cr, ce) else (Set.insert e cr, Set.union (classElems e) ce)) (Set.empty, Set.empty) (Set.toList elems)
-				
-			classElems :: Tuple Element -> Set (Tuple Element)
-			classElems (Tuple [(n1, p1), (n2, p2)]) = -- n1 == n2
-				if (n1 /= n2) then error "error" else
-					Set.fromList (map (\g -> Tuple [(n1, p1 ~^ g), (n2, p2 ~^ g)]) (map PG.fromList (List.permutations [0..n1-1])))
-			classElems _ = error "Wrong pattern"
 
