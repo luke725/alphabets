@@ -78,16 +78,5 @@ module Letter where
 	dimension :: Alphabet -> Int
 	dimension alph =
 		maximum $ map (\(atoms, _) -> List.length atoms) alph
-				
-			
---	automorphismPreservesPartition :: Partition -> Permutation Atom -> Bool
---	automorphismPreservesPartition part f =
---		all (\set -> set == Set.map (\a -> a .^ f) set) partSets
---		where
---			partSets = map Set.fromList part
 
-					
---	letterRelations :: Letter -> Map Partition (Arity, Set (Tuple Element))
---	letterRelations letter =
---		relationsFromAutomorphisms (letterAutomorphisms letter)
 

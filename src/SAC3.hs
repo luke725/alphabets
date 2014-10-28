@@ -106,7 +106,7 @@ module SAC3 where
 			sacStep (last, dom) =
 				case runState (buildBranch (PS.toMap dom)) (last, dom) of
 					(Nothing, (last', dom')) -> Right (last', dom')
-					(Just m, _)          -> Left m
+					(Just m, _)              -> Left m
 				
 			buildBranch :: Map v (Set d) -> ACState v d (Maybe (Map v d))
 			buildBranch m =

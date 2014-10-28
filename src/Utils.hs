@@ -153,12 +153,4 @@ module Utils where
 					Nothing -> firstTuple (ls:ts)
 
 	nextTuple [] (Tuple (_:_)) = error ("Unexpected pattern in nextTuple")
-
 	nextTuple (_:_) (Tuple []) = error ("Unexpected pattern in nextTuple")
-	
---	showTime :: String -> a -> a
---	showTime s a = unsafePerformIO $ do
---		c <- getCurrentTime
---		traceIO (s ++ " " ++ show c)
---		return a
-

@@ -31,7 +31,7 @@ module AC2001 where
 	    -> PossibleSolutions v d
 	    -> PossibleSolutions v d
 	    
-	runAC' cspDataVD sol = snd $ execState (ac cspDataVD) (emptyLast, sol)
+	runAC' cspData sol = snd $ execState (ac cspData) (emptyLast, sol)
 	
 	ac :: forall v d. (Ord v, Ord d) 
 		=> CSPData v d

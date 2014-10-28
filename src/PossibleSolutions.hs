@@ -16,14 +16,16 @@ module PossibleSolutions where
 	fromMap :: Map a (Set b) -> PossibleSolutions a b
 	fromMap m = PossibleSolutions m
 	
+	-- every possible solution of a mapping from set a to set b
 	full :: (Ord a) => Set a -> Set b -> PossibleSolutions a b
 	full sa sb = 
 		PossibleSolutions $ Map.fromList (List.map (\a -> (a, sb)) (Set.toList sa))
 
 	notEmpty :: PossibleSolutions a b -> Bool
 	notEmpty (PossibleSolutions m) =
-		all (\set -> not (Set.null set)) (Map.elems m)
+		all (\set -> Set.size set > 0) (Map.elems m)
 
+	-- is the number of possible solutions equal to one
 	isUnique :: PossibleSolutions a b -> Bool
 	isUnique (PossibleSolutions m) =
 		all (\set -> Set.size set == 1) (Map.elems m)
@@ -38,6 +40,7 @@ module PossibleSolutions where
 	setDomain a sb (PossibleSolutions m) =
 		PossibleSolutions (Map.insert a sb m)
 
+	-- sets a singleton as a domain for a variable
 	setValue :: (Ord a) => a -> b -> PossibleSolutions a b -> PossibleSolutions a b
 	setValue a b sol = setDomain a (Set.singleton b) sol
 
@@ -45,9 +48,7 @@ module PossibleSolutions where
 	removeFromDomain a b (PossibleSolutions m) =
 		PossibleSolutions (Map.update (\s -> Just $ Set.delete b s) a m)
 
-	map :: (a -> Set b -> Set b) -> PossibleSolutions a b -> PossibleSolutions a b
-	map f (PossibleSolutions m) = PossibleSolutions (Map.mapWithKey f m)
-
+	-- returns any solutions; assumes that a set of solutions is nonempty
 	anySolution :: PossibleSolutions a b -> Map a b
 	anySolution (PossibleSolutions m) = Map.map Set.findMin m
 
