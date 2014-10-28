@@ -5,6 +5,7 @@ module SAC3 where
 	import qualified Data.Set as Set
 	import Data.Map(Map, (!))
 	import qualified Data.Map as Map
+	import qualified Data.List as List
 	import Control.Monad.State
 	import Prelude hiding (last)
 
@@ -15,6 +16,41 @@ module SAC3 where
 	import Utils
 	import Constraint (CSPData)
 	import qualified Constraint
+	
+	type PairSet a b = Map a (Set b)
+	
+	pairSetFromMap :: Map a (Set b) -> PairSet a b
+	pairSetFromMap m = Map.filter (\s -> Set.size s > 0) m
+	
+	removePair :: (Ord a, Ord b) => (a, b) -> PairSet a b -> PairSet a b
+	removePair (a, b) ps =
+		if (Set.member b (ps!a))
+		then
+			if Set.null bs
+			then Map.delete a ps
+			else Map.insert a bs ps
+		else
+			error "error"
+		where
+			bs = Set.delete b (ps!a)
+			
+	removePairs :: (Ord a, Ord b) => [(a, b)] -> PairSet a b -> PairSet a b
+	removePairs l ps = foldl (\ps' (a, b) -> removePair (a, b) ps') ps l
+	
+	getAny :: (Ord a, Ord b) => PairSet a b -> a -> Maybe b
+	getAny ps a =
+		case Map.lookup a ps of
+			Just bs -> Just (Set.findMin bs)
+			Nothing -> Nothing
+			
+	pairSetSize :: PairSet a b -> Int
+	pairSetSize ps = Map.size $ Map.filter (\s -> Set.size s > 0) ps
+	
+	pairSetKeys :: PairSet a b -> [a]
+	pairSetKeys = Map.keys
+	
+	data BuildBranchResult a b = Branch [(a, b)] | ZeroBranch (a, b) deriving (Eq, Ord, Show)
+	
 	
 	-- finds solution with some generic optimizations
 	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
@@ -104,64 +140,54 @@ module SAC3 where
 		where
 			sacStep :: (Last v d, PossibleSolutions v d) -> Either (Map v d) (Last v d, PossibleSolutions v d)
 			sacStep (last, dom) =
-				case runState (buildBranch (PS.toMap dom)) (last, dom) of
+				case runState (buildBranches (pairSetFromMap $ PS.toMap dom)) (last, dom) of
 					(Nothing, (last', dom')) -> Right (last', dom')
 					(Just m, _)              -> Left m
 				
-			buildBranch :: Map v (Set d) -> ACState v d (Maybe (Map v d))
-			buildBranch m =
-				if Map.size m == 0
+			buildBranches :: PairSet v d -> ACState v d (Maybe (Map v d))
+			buildBranches ps =
+				if pairSetSize ps == 0
 				then return Nothing
 				else do
 					(last, dom) <- get
-					bb <- buildBranch' m (Map.keys m) (Map.empty)
+					bb <- buildBranch ps (pairSetKeys ps) []
+					put (last, dom)
 					case bb of
-						Left m'         -> return (Just m')
-						Right (del, m') -> do
-							put (last, dom)
-							case del of
-								Just (v, d) -> do
-									dv <- getDomain v
-									setDomain v (Set.delete d dv)
-									ac cspData
-									return Nothing
-								Nothing -> buildBranch m'
-	
-			buildBranch' 
-				:: Map v (Set d) 
-				-> [v] 
-				-> Map v d 
-				-> ACState v d (Either (Map v d) (Maybe (v, d), Map v (Set d)))
-				
-			buildBranch' m [] br =
-				if Map.size br == Set.size (PS.variables sol) 
-				then return (Left br) 
-				else return (Right (Nothing, m))
-				
-			buildBranch' m (v:free) br =
-				case Map.lookup v m of
-					Nothing -> buildBranch' m free br
-					Just mv ->
-						if Set.size (m!v) == 0
-						then buildBranch' (Map.delete v m) free br
-						else do
-							let d = Set.findMin mv
-							let m' = 
-								if Set.size mv > 1 
-								then Map.insert v (Set.deleteMin (mv)) m 
-								else Map.delete v m
+						Branch l ->
+							if List.length l == Set.size (PS.variables dom)
+							then return $ Just (Map.fromList l)
+							else buildBranches (removePairs l ps)
+						ZeroBranch (v, d) -> do
 							dv <- getDomain v
-							if not (Set.member d dv) 
-							then buildBranch' m' (v:free) br 
-							else do
-								setDomain v (Set.singleton d)
-								ac cspData
-								(_, dom') <- get
-								if PS.notEmpty dom'
-								then
-									buildBranch' m' free (Map.insert v d br)
-								else do
-									if Map.size br > 0
-									then return (Right (Nothing, m))
-									else return (Right (Just (v, d), m'))
+							setDomain v (Set.delete d dv)
+							ac cspData
+							buildBranches (removePair (v, d) ps)
+	
+			buildBranch
+				:: PairSet v d 
+				-> [v] 
+				-> [(v, d)]
+				-> ACState v d (BuildBranchResult v d)
+				
+			buildBranch _ [] br = return (Branch br)
+				
+			buildBranch ps (v:free) br =
+				case getAny ps v of
+					Nothing -> buildBranch ps free br
+					Just d -> do
+							let ps' = removePair (v, d) ps
+--							dv <- getDomain v
+--							if not (Set.member d dv) 
+--							then buildBranch ps' (v:free) br 
+--							else do
+							setDomain v (Set.singleton d)
+							ac cspData
+							(_, dom') <- get
+							if PS.notEmpty dom'
+							then
+								buildBranch ps' free ((v, d):br)
+							else
+								case br of
+									[]    -> return (ZeroBranch (v, d))
+									(_:_) -> return (Branch br)
 
