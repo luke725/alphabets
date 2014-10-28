@@ -14,19 +14,7 @@ module SAC3 where
 	import AC2001
 	import Utils
 	
-	applyUnaryConstraint :: (Ord v, Ord d, Ord rname) => Structure rname v -> Structure rname d -> PossibleSolutions v d
-	applyUnaryConstraint vstr dstr =
-		foldl 
-			(\sol (v, ds) ->  PS.setDomain v (Set.intersection ds (PS.domain sol v)) sol) 
-			(PS.full (structureElems vstr) (structureElems dstr)) 
-			constraints
-		where
-			(Signature sigMap) = structureSig vstr
-			constraints = 
-				concatMap (\(vs, ds) -> map (\v -> (v, ds)) (Set.toList vs))
-				$ map (\(Relation (_, _, vts), Relation (_, _, dts)) -> (Set.map (\(Tuple[v]) -> v) vts, Set.map (\(Tuple[d]) -> d) dts)) 
-				$ map (\rname -> (getRelation vstr rname, getRelation dstr rname)) $ Map.keys $ Map.filter (\(Arity r) -> (r == 1)) sigMap
-	
+	-- finds solution with some generic optimizations
 	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
 		=> Structure rname v 
 		-> Structure rname d
@@ -42,6 +30,19 @@ module SAC3 where
 			sigMapInt = sigMapToInt (structureSig vstrInt)
 			(vstrInt, vstrMap, _) = intStructure vstr
 			(dstrInt, dstrMap, _) = intStructure dstr
+			
+	applyUnaryConstraint :: (Ord v, Ord d, Ord rname) => Structure rname v -> Structure rname d -> PossibleSolutions v d
+	applyUnaryConstraint vstr dstr =
+		foldl 
+			(\sol (v, ds) ->  PS.setDomain v (Set.intersection ds (PS.domain sol v)) sol) 
+			(PS.full (structureElems vstr) (structureElems dstr)) 
+			constraints
+		where
+			(Signature sigMap) = structureSig vstr
+			constraints = 
+				concatMap (\(vs, ds) -> map (\v -> (v, ds)) (Set.toList vs))
+				$ map (\(Relation (_, _, vts), Relation (_, _, dts)) -> (Set.map (\(Tuple[v]) -> v) vts, Set.map (\(Tuple[d]) -> d) dts)) 
+				$ map (\rname -> (getRelation vstr rname, getRelation dstr rname)) $ Map.keys $ Map.filter (\(Arity r) -> (r == 1)) sigMap
 	
 
 	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
@@ -50,7 +51,7 @@ module SAC3 where
 		-> Maybe (Map v d)
 		
 	findSolution vstr dstr =
-		case runGsac' vstr dstr cspDataVD (applyUnaryConstraint vstr dstr) of
+		case runSAC' vstr dstr cspDataVD (applyUnaryConstraint vstr dstr) of
 			Left m -> Just m
 			Right sol -> 
 				if PS.notEmpty sol
@@ -67,7 +68,7 @@ module SAC3 where
 			
 			setValue' _ _ [] = Left Nothing
 			setValue' sol v (d:ds) =
-				case runGsac' vstr' dstr' cspDataVD (PS.setDomain v (Set.singleton d) sol) of
+				case runSAC' vstr' dstr' cspDataVD (PS.setDomain v (Set.singleton d) sol) of
 					Left m -> Left (Just m)
 					Right sol' ->
 						if PS.notEmpty sol'
@@ -79,17 +80,17 @@ module SAC3 where
 			vstr' = removeUnaryRelations vstr
 			dstr' = removeUnaryRelations dstr
 
-	runGsac
+	runSAC
 		:: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
 		-> Structure rname d
 		-> PossibleSolutions v d 
 		-> Either (Map v d) (PossibleSolutions v d)
 		
-	runGsac vstr dstr sol = runGsac' vstr dstr (cspData vstr dstr) sol
+	runSAC vstr dstr sol = runSAC' vstr dstr (cspData vstr dstr) sol
 				
 
-	runGsac'
+	runSAC'
 		:: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
 		-> Structure rname d
@@ -97,17 +98,17 @@ module SAC3 where
 		-> PossibleSolutions v d 
 		-> Either (Map v d) (PossibleSolutions v d)
 		
-	runGsac' vstr dstr cspDataVD sol = do
-		(_, sol') <- fixPointM gsacStep (emptyLast, runGac vstr dstr sol)
+	runSAC' vstr dstr cspDataVD sol = do
+		(_, sol') <- fixPointM sacStep (emptyLast, runAC vstr dstr sol)
 		return sol'
 		where
-			gsacStep :: (Last v d, PossibleSolutions v d) -> Either (Map v d) (Last v d, PossibleSolutions v d)
-			gsacStep (last, dom) =
+			sacStep :: (Last v d, PossibleSolutions v d) -> Either (Map v d) (Last v d, PossibleSolutions v d)
+			sacStep (last, dom) =
 				case runState (buildBranch (PS.toMap dom)) (last, dom) of
 					(Nothing, (last', dom')) -> Right (last', dom')
 					(Just m, _)          -> Left m
 				
-			buildBranch :: Map v (Set d) -> GACState v d (Maybe (Map v d))
+			buildBranch :: Map v (Set d) -> ACState v d (Maybe (Map v d))
 			buildBranch m =
 				if Map.size m == 0
 				then return Nothing
@@ -122,18 +123,15 @@ module SAC3 where
 								Just (v, d) -> do
 									dv <- getDomain v
 									setDomain v (Set.delete d dv)
-									gac cspDataVD
+									ac cspDataVD
 									return Nothing
 								Nothing -> buildBranch m'
-								
---			domSize m =
---				sum $ map (\(_, s) -> Set.size s) (Map.toList m)
 	
 			buildBranch' 
 				:: Map v (Set d) 
 				-> [v] 
 				-> Map v d 
-				-> GACState v d (Either (Map v d) (Maybe (v, d), Map v (Set d)))
+				-> ACState v d (Either (Map v d) (Maybe (v, d), Map v (Set d)))
 				
 			buildBranch' m [] br =
 				if Map.size br == Set.size (structureElems vstr) 
@@ -157,7 +155,7 @@ module SAC3 where
 							then buildBranch' m' (v:free) br 
 							else do
 								setDomain v (Set.singleton d)
-								gac cspDataVD
+								ac cspDataVD
 								(_, dom') <- get
 								if PS.notEmpty dom'
 								then

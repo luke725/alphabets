@@ -16,7 +16,7 @@ cabal-version:       >=1.8
 
 executable alphabets
   main-is:         	 Main.hs
-  build-depends:     base, containers ==0.5.*, HaskellForMaths ==0.4.*, parallel, cond, mtl
+  build-depends:     base, containers ==0.5.*, HaskellForMaths ==0.4.*, parallel, cond, mtl, time
   hs-source-dirs:    src
   ghc-options:       -Wall -Werror -O2 -threaded
   extensions:        ScopedTypeVariables DoAndIfThenElse
@@ -25,7 +25,7 @@ test-suite alphabets-tests
   type:              exitcode-stdio-1.0
   hs-source-dirs:    tests, src
   main-is:           Tests.hs
-  build-depends:     base ==4.6.*, containers ==0.5.*, HaskellForMaths ==0.4.*, parallel ==3.2.*, cond, mtl,
+  build-depends:     base ==4.6.*, containers ==0.5.*, HaskellForMaths ==0.4.*, parallel ==3.2.*, cond, mtl, time,
                      HUnit,
                      QuickCheck,
                      quickcheck-instances,

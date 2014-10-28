@@ -1,15 +1,19 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
 module AlphabetCSP where
---	import Debug.Trace
+	import Debug.Trace
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
 	import Data.Map (Map)
 	import qualified Data.Map as Map
-	import Math.Algebra.Group.PermutationGroup(Permutation)
+	import qualified Data.Maybe as Maybe
+	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
 	import qualified Math.Algebra.Group.SchreierSims as SS
+	
+	import System.IO.Unsafe
+	import Data.Time
 
 	import RelationalStructure
 	import Letter
@@ -37,24 +41,18 @@ module AlphabetCSP where
 			else ErrorType
 	
 	type GroupGens = [[[Atom]]]
+	
+	showTime :: String -> a -> a
+	showTime s a = unsafePerformIO $ do
+		c <- getCurrentTime
+		traceIO (s ++ " " ++ show c)
+		return a
 
-	one :: Element -> Element
-	one (Element (r, _)) = Element (r, PG.p [])
+	neutralElement :: Element -> Element
+	neutralElement (Element (r, _)) = Element (r, PG.p [])
 	
 	isNeutral :: Element -> Bool
-	isNeutral e = (e == one e)
-	
-	eltArity :: Element -> Int
-	eltArity (Element (ar, _)) = ar
-	
-	eltArities :: Relation RName Element -> Set Int
-	eltArities (Relation (_, _, ts)) = 
-		if Set.null ts
-		then Set.empty
-		else
-			Set.fromList (map eltArity t)
-		where
-			Tuple t = Set.findMin ts
+	isNeutral e = (e == neutralElement e)
 	
 	
 	findMajorityLetter :: Letter -> Maybe (Map (Tuple Element) Element)
@@ -161,11 +159,17 @@ module AlphabetCSP where
 		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureDDirect alphabet)		
 	
 	findMajorityAutomorphisms :: Alphabet -> Maybe (Map (Tuple Element) Element)
-	findMajorityAutomorphisms alphabet =	
-		if structureSig strDo == structureSig strV
-		then findSolutionFast strDo strV
+	findMajorityAutomorphisms alphabet =
+		showTime "before"
+		$ if structureSig strDo == structureSig strV
+		then 
+			case findSolutionFast (trace ("Do: " ++ stats strDo) strDo) (trace ("V: " ++ stats strV) strV) of
+				Just x  -> showTime "after j" (Just x)
+				Nothing -> showTime "after n" Nothing
+				
 		else error "Signature mismatch"
 		where
+--			alphabet' = showTime "alph" alphabet
 			strDo = structureDoDirect alphabet
 			strV = structureV alphabet
 					
@@ -181,4 +185,35 @@ module AlphabetCSP where
 	isConjClassRep :: Element -> Bool
 	isConjClassRep (Element (i, p)) =
 		conjClassRep (Set.fromList [0..i-1]) p == p
+
+	relationsFromAutomorphisms 
+		:: Automorphisms
+		-> Map Partition (Arity, Set (Tuple Element))
+
+	relationsFromAutomorphisms (atoms, perms) =
+		removeDup
+		$ Map.fromList
+		$ map
+			(\part -> 
+				(part, 
+				(Arity $ length $ filter (\l -> length l > 1) part,
+				 Set.fromList (Maybe.mapMaybe (translateAutomorphism part) perms)))
+			)
+		$ Set.toList (allPermPartPreserveOrbits perms atoms)
+		where
+			translateAutomorphism :: Partition -> Permutation Atom -> Maybe (Tuple Element)
+			translateAutomorphism part f = 
+				case allJust (map permute part) of
+					Just t  -> Just $ Tuple $ filter (\(Element (i, _)) -> i > 1) t
+					Nothing -> Nothing
+				where
+					permute :: [Atom] -> Maybe Element
+					permute p =
+						case allJust (map (\e -> List.elemIndex e pp) p) of
+							Just l  -> Just (Element (List.length l, PG.fromList l))
+							Nothing -> Nothing
+						where
+							pp = map (\a -> a .^ f) p
+
+
 

@@ -21,8 +21,15 @@ module RelationalStructure where
 	
 	
 	stats :: Structure rname element -> String
-	stats (Structure (Signature sigMap, elems, _)) =
-		"rels: " ++ show (Map.size sigMap) ++ ", elems: " ++ show (Set.size elems)
+	stats (Structure (Signature sigMap, elems, relMap)) =
+		"rels: " ++ show (Map.size sigMap) ++ ", elems: " ++ show (Set.size elems) ++ ", max rel size: " ++ show maxSize
+		where
+			maxSize =
+				List.maximum
+				$ (\l -> 0:l)
+				$ map (\(Relation (_, _, ts)) -> Set.size ts) 
+				$ filter (\(Relation (_, Arity r, _)) -> r > 1) 
+				$ Map.elems relMap
 	
 	
 	sigFromRels :: (Ord rname) => [Relation rname element] -> Signature rname
@@ -244,14 +251,6 @@ module RelationalStructure where
 		where
 			mapRel (Relation (rname, ar, tuples)) = 
 				Relation (rname, ar, Set.map (\(Tuple xs) -> Tuple $ map f xs) tuples)
-				
---	rnameToInt :: (Ord element, Ord rname) => Structure rname element -> Structure rname Int
---	rnameToInt str =
---		renameRelations (\rname -> rnameMap!rname) str
---		where
---			(Signature sigMap) = structureSig str
---			rnames = Map.keys sigMap
---			rnameMap = Map.fromList $ zip rnames [1..List.length rnames]
 
 	sigMapToInt :: (Ord rname) => Signature rname -> Map rname Int
 	sigMapToInt (Signature sigMap) =

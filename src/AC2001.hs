@@ -15,34 +15,34 @@ module AC2001 where
 
 	newtype Constraint v d = Constraint (Tuple v, Set (Tuple d)) deriving (Show, Eq, Ord)
 	newtype Last v d = Last (Map ((v, d), Constraint v d) (Tuple d)) deriving (Show, Eq, Ord)
-	type GACState v d = State (Last v d, PossibleSolutions v d)
+	type ACState v d = State (Last v d, PossibleSolutions v d)
 	
 	type CSPData v d = (Set (v, Constraint v d), Map v [(v, Constraint v d)])
 	
-	runGac :: forall v d rname. (Ord v, Ord d, Ord rname) 
+	runAC :: forall v d rname. (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
 		-> Structure rname d
 		-> PossibleSolutions v d 
 		-> PossibleSolutions v d
 		
-	runGac vstr dstr sol = snd $ execState (gac $ cspData vstr dstr) (emptyLast, sol)
+	runAC vstr dstr sol = snd $ execState (ac $ cspData vstr dstr) (emptyLast, sol)
 	
-	gac :: forall v d. (Ord v, Ord d) 
+	ac :: forall v d. (Ord v, Ord d) 
 		=> CSPData v d
-		-> GACState v d ()
+		-> ACState v d ()
 		
-	gac (allCs, mapCs) =
-		gacStep allCs
+	ac (allCs, mapCs) =
+		acStep allCs
 		where
-			gacStep :: Set (v, Constraint v d) -> GACState v d ()
-			gacStep q =
+			acStep :: Set (v, Constraint v d) -> ACState v d ()
+			acStep q =
 				if Set.size q == 0
 				then return ()
 				else do
 					let ((v, c), q') = Set.deleteFindMin q
 					delete <- revise (v, c)
 					let q'' = if delete then addNeighbors (v, c) q' else q'
-					gacStep q''
+					acStep q''
 					
 			addNeighbors :: (v, Constraint v d) -> Set (v, Constraint v d) -> Set (v, Constraint v d)
 			addNeighbors (v, c) q =
@@ -60,17 +60,14 @@ module AC2001 where
 				foldl (\m (v, vc) -> Map.insertWith (++) v [vc] m) Map.empty 
 				$ concatMap (\(v, c) -> map (\v' -> (v, (v',c))) (constraintVars c)) 
 				$ allCs
-				
-				
 			
-			
-	revise :: forall v d. (Ord v, Ord d) => (v, Constraint v d) -> GACState v d Bool
+	revise :: forall v d. (Ord v, Ord d) => (v, Constraint v d) -> ACState v d Bool
 	revise (v, c) = do
 		dom <- getDomain v
 		rs <- (mapM reviseD $ Set.toList dom)
 		return (or rs)
 		where
-			reviseD :: d -> GACState v d Bool
+			reviseD :: d -> ACState v d Bool
 			reviseD d = do
 				mt <- getLast ((v,d), c)
 				ok <- case mt of
@@ -98,22 +95,22 @@ module AC2001 where
 			getDomains (Constraint (Tuple ts, _)) = do
 				mapM getDomain ts	
 	
-	getLast :: (Ord v, Ord d) => ((v, d), Constraint v d) -> GACState v d (Maybe (Tuple d))
+	getLast :: (Ord v, Ord d) => ((v, d), Constraint v d) -> ACState v d (Maybe (Tuple d))
 	getLast k = do
 		(Last m, _) <- get
 		return $ Map.lookup k m
 		
-	setLast :: (Ord v, Ord d) => ((v, d), Constraint v d) -> Tuple d -> GACState v d ()
+	setLast :: (Ord v, Ord d) => ((v, d), Constraint v d) -> Tuple d -> ACState v d ()
 	setLast k t = do
 		(Last m, sol) <- get
 		put (Last $ Map.insert k t m, sol)
 		
-	getDomain :: (Ord v) => v -> GACState v d (Set d)
+	getDomain :: (Ord v) => v -> ACState v d (Set d)
 	getDomain v = do
 		(_, sol) <- get
 		return (PS.domain sol v)
 		
-	setDomain :: (Ord v) => v -> Set d -> GACState v d ()
+	setDomain :: (Ord v) => v -> Set d -> ACState v d ()
 	setDomain v ds = do
 		(last, sol) <- get
 		put (last, PS.setDomain v ds sol)

@@ -3,14 +3,14 @@
 module Letter where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
-	import Data.Map (Map, (!))
+	import Data.Map ((!))
 	import qualified Data.Map as Map
 	import qualified Data.List as List
-	import qualified Data.Maybe as Maybe
+--	import qualified Data.Maybe as Maybe
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PermutationGroup
 	
-	import Utils
+--	import Utils
 	
 	newtype Atom = Atom Int deriving (Ord, Eq)
 	
@@ -85,46 +85,14 @@ module Letter where
 		maximum $ map (\(atoms, _) -> List.length atoms) alph
 				
 			
-	automorphismPreservesPartition :: Partition -> Permutation Atom -> Bool
-	automorphismPreservesPartition part f =
-		all (\set -> set == Set.map (\a -> a .^ f) set) partSets
-		where
-			partSets = map Set.fromList part	
-	
-	translateAutomorphism :: Partition -> Permutation Atom -> Maybe (Tuple Element)
-	translateAutomorphism part f = 
-		case allJust (map permute part) of
-			Just t  -> Just $ Tuple $ filter (\(Element (i, _)) -> i > 1) t
-			Nothing -> Nothing
-		where
-			permute :: [Atom] -> Maybe Element
-			permute p =
-				case allJust (map (\e -> List.elemIndex e pp) p) of
-					Just l  -> Just (Element (List.length l, PermutationGroup.fromList l))
-					Nothing -> Nothing
-				where
-					pp = map (\a -> a .^ f) p
+--	automorphismPreservesPartition :: Partition -> Permutation Atom -> Bool
+--	automorphismPreservesPartition part f =
+--		all (\set -> set == Set.map (\a -> a .^ f) set) partSets
+--		where
+--			partSets = map Set.fromList part
 
 					
-	letterRelations :: Letter -> Map Partition (Arity, Set (Tuple Element))
-	letterRelations letter =
-		relationsFromAutomorphisms (letterAutomorphisms letter)
-			
-					
-	relationsFromAutomorphisms 
-		:: Automorphisms
-		-> Map Partition (Arity, Set (Tuple Element))
-
-	relationsFromAutomorphisms (atoms, perms) =
-		removeDup
-		$ Map.fromList
-		$ map
-			(\part -> 
-				(part, 
-				(Arity $ length $ filter (\l -> length l > 1) part,
-				 Set.fromList (Maybe.mapMaybe (translateAutomorphism part) perms)))
-			)
-		$ Set.toList (allPermPartPreserveOrbits perms atoms)
-
-
+--	letterRelations :: Letter -> Map Partition (Arity, Set (Tuple Element))
+--	letterRelations letter =
+--		relationsFromAutomorphisms (letterAutomorphisms letter)
 
