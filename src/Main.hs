@@ -8,19 +8,24 @@ import System.IO
 
 --import qualified Data.Map as Map
 --import qualified Control.Monad as Monad
+
+
+import qualified Data.List as List
+import qualified Math.Algebra.Group.SchreierSims as SS
+import qualified Math.Algebra.Group.PermutationGroup as PG
+
+import Utils
+import Data
 import Letter
 import AlphabetCSP
-
-import Data
-import Utils
 
 		
 runAll :: [Atom] -> [GroupGens] -> [(GroupGens, Bool)]
 runAll _atoms sl =
-	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms (ggAtoms cl, ggElements cl))) sl)
+	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms [ggAuto cl])) sl)
 	
-run1 :: GroupGens -> (GroupGens, Bool)
-run1 cl = showRes (cl, checkMajorityAutomorphisms (ggAtoms cl, ggElements cl))
+--run1 :: GroupGens -> (GroupGens, Bool)
+--run1 cl = showRes (cl, checkMajorityAutomorphisms [ggAuto cl])
 	
 myParMap :: (a -> b) -> [a] -> Eval [b]
 myParMap _ [] = return []
@@ -32,6 +37,9 @@ myParMap f (a:as) = do
 run :: Int -> IO ()
 run n = do
 	putStrLn $ show $ runAll (map Atom [1..n]) (s !! (n-1))
+	
+ggAuto :: GroupGens -> AutomorphismGroup
+ggAuto gg = (List.nub (concat $ concat gg), SS.elts (map (PG.fromCycles) gg))
 	
 	
 --allTogether :: String -> Int -> IO ()	
@@ -56,12 +64,12 @@ run n = do
 --			Monad.foldM (\() (Tuple [x,y], z) -> putStrLn (show x ++ "; " ++ show y ++ "; " ++ show z)) () (Map.toList m)	
 	
 	
-runPart :: String -> IO ()	
-runPart path = do
-	let n = 8
-	rs <- results8 path
-	let done = map (\(w, _) -> w) rs
-	putStrLn $ show $ runAll (map Atom [1..n]) $ filter (\x -> not $ elem x done) $ (s !! (n-1))
+-- runPart :: String -> IO ()	
+-- runPart path = do
+--	let n = 8
+--	rs <- results8 path
+--	let done = map (\(w, _) -> w) rs
+--	putStrLn $ show $ runAll (map Atom [1..n]) $ filter (\x -> not $ elem x done) $ (s !! (n-1))
 	
 	
 data Flag = Path String deriving (Eq)
@@ -79,15 +87,15 @@ main :: IO ()
 main = do
 	args <- getArgs
 	case getOpt Permute options args of
-		([Path path], comm, []) ->
-			case comm of
-				["runPart"] -> runPart path
+--		([Path path], comm, []) ->
+--			case comm of
+--				["runPart"] -> runPart path
 --				["all", ks] -> allTogether path (read ks)
-				_ -> dump info >> exitWith (ExitFailure 1)
+--				_ -> dump info >> exitWith (ExitFailure 1)
 		([], comm, []) ->
 			case comm of
 				["run", ns] -> run (read ns)
-				["run1"] -> putStrLn $ show $ run1 $ getGroupGens [[[3,4]],[[5,6]],[[3,5],[4,6]],[[1,2]]]
+--				["run1"] -> putStrLn $ show $ run1 $ getGroupGens [[[3,4]],[[5,6]],[[3,5],[4,6]],[[1,2]]]
 --				["all5"] -> all5
 				_ -> dump info >> exitWith (ExitFailure 1)
 		(_, _, errs) ->

@@ -30,6 +30,9 @@ module PossibleSolutions where
 
 	domain :: (Ord a) => PossibleSolutions a b -> a -> Set b
 	domain (PossibleSolutions m) a = m!a
+	
+	variables :: (Ord a) => PossibleSolutions a b -> Set a
+	variables (PossibleSolutions m) = Map.keysSet m
 
 	setDomain :: (Ord a) => a -> Set b -> PossibleSolutions a b -> PossibleSolutions a b
 	setDomain a sb (PossibleSolutions m) =

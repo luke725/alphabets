@@ -1,7 +1,7 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
 module AlphabetCSP where
-	import Debug.Trace
+--	import Debug.Trace
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
@@ -10,24 +10,24 @@ module AlphabetCSP where
 	import qualified Data.Maybe as Maybe
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
-	import qualified Math.Algebra.Group.SchreierSims as SS
+--	import qualified Math.Algebra.Group.SchreierSims as SS
 	
-	import System.IO.Unsafe
-	import Data.Time
+--	import System.IO.Unsafe
+--	import Data.Time
 
 	import RelationalStructure
 	import Letter
 	import Utils
 	import SAC3
 
-	data RName = Original (Automorphisms, Partition) | Unary Element | EType ElemType deriving (Show, Ord, Eq)
-
-	type AStructure a = Structure RName a
+	data RName = Original (AutomorphismGroup, Partition) | Unary Element | EType ElementType deriving (Show, Ord, Eq)
 	
-	data ElemType = CorrectType Int | ErrorType deriving (Show, Ord, Eq)
+	newtype Element = Element (Int, Permutation Int) deriving (Show, Ord, Eq)
+	
+	data ElementType = CorrectType Int | ErrorType deriving (Show, Ord, Eq)
 	
 	class Typed a where
-		elemType :: a -> ElemType
+		elemType :: a -> ElementType
 		
 	instance Typed (Element) where
 		elemType (Element (s, _)) = (CorrectType s)
@@ -41,26 +41,12 @@ module AlphabetCSP where
 			else ErrorType
 	
 	type GroupGens = [[[Atom]]]
-	
-	showTime :: String -> a -> a
-	showTime s a = unsafePerformIO $ do
-		c <- getCurrentTime
-		traceIO (s ++ " " ++ show c)
-		return a
 
 	neutralElement :: Element -> Element
 	neutralElement (Element (r, _)) = Element (r, PG.p [])
 	
 	isNeutral :: Element -> Bool
 	isNeutral e = (e == neutralElement e)
-	
-	
-	findMajorityLetter :: Letter -> Maybe (Map (Tuple Element) Element)
-	findMajorityLetter letter =	
-		findMajorityAutomorphisms [letterAutomorphisms letter]
-
-	checkMajorityAutomorphisms :: Automorphisms -> Bool
-	checkMajorityAutomorphisms automorphisms = (findMajorityAutomorphisms [automorphisms] /= Nothing)
 	
 	relationsFromAlphabet :: Alphabet -> [Relation RName Element]
 	relationsFromAlphabet alphabet =
@@ -70,20 +56,21 @@ module AlphabetCSP where
 				map (\(as, (ar, s)) -> Relation (Original ((atoms, perm), as), ar, s))
 				$ Map.toList (relationsFromAutomorphisms (atoms, perm))
 				
-	addTypeRels :: Structure RName Element -> Structure RName Element
-	addTypeRels str =
-		addRelations (map (\(t, s) -> Relation (EType t, Arity 1, Set.map (\e -> Tuple [e]) s)) $ Map.toList typeMap) str
-		where
-			typeMap :: Map ElemType (Set Element)
-			typeMap =
-				foldl 
-					(\m e -> Map.insertWith Set.union (elemType e) (Set.singleton e) m) 
-					Map.empty 
-					(Set.toList $ structureElems str)
+
 				
 	structureT :: Alphabet -> Structure RName Element
 	structureT alphabet = 
 		filterStructure (okType alphabet) $ addTypeRels (structureFromRels (relationsFromAlphabet alphabet))
+		where
+			addTypeRels :: Structure RName Element -> Structure RName Element
+			addTypeRels str =
+				addRelations (map (\(t, s) -> Relation (EType t, Arity 1, Set.map (\e -> Tuple [e]) s)) $ Map.toList $ typeMap str) str
+				
+			typeMap str =
+				foldl 
+					(\m e -> Map.insertWith Set.union (elemType e) (Set.singleton e) m) 
+					Map.empty 
+					(Set.toList $ structureElems str)
 	
 	structureTu :: Alphabet -> Structure RName Element
 	structureTu alphabet = 
@@ -158,36 +145,25 @@ module AlphabetCSP where
 	structureDoDirect alphabet =
 		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureDDirect alphabet)		
 	
-	findMajorityAutomorphisms :: Alphabet -> Maybe (Map (Tuple Element) Element)
-	findMajorityAutomorphisms alphabet =
-		showTime "before"
-		$ if structureSig strDo == structureSig strV
-		then 
-			case findSolutionFast (trace ("Do: " ++ stats strDo) strDo) (trace ("V: " ++ stats strV) strV) of
-				Just x  -> showTime "after j" (Just x)
-				Nothing -> showTime "after n" Nothing
-				
+	checkMajorityAutomorphisms :: Alphabet -> Bool
+	checkMajorityAutomorphisms alphabet =
+		if structureSig strDo == structureSig strV
+		then findSolutionFast strDo strV /= Nothing
 		else error "Signature mismatch"
 		where
---			alphabet' = showTime "alph" alphabet
 			strDo = structureDoDirect alphabet
 			strV = structureV alphabet
-					
-	ggElements :: GroupGens -> [Permutation Atom]
-	ggElements gg = SS.elts (map (PG.fromCycles) gg)
+			
+	checkMajorityLetter :: Letter -> Bool
+	checkMajorityLetter letter =	
+		checkMajorityAutomorphisms [letterAutomorphisms letter]
 	
-	ggAtoms :: GroupGens -> [Atom]
-	ggAtoms gg = List.nub (concat $ concat gg)
-					
-	findMajorityGG :: GroupGens -> Maybe (Map (Tuple Element) Element)
-	findMajorityGG gg = findMajorityAutomorphisms [(ggAtoms gg, ggElements gg)]
-
 	isConjClassRep :: Element -> Bool
 	isConjClassRep (Element (i, p)) =
 		conjClassRep (Set.fromList [0..i-1]) p == p
 
 	relationsFromAutomorphisms 
-		:: Automorphisms
+		:: AutomorphismGroup
 		-> Map Partition (Arity, Set (Tuple Element))
 
 	relationsFromAutomorphisms (atoms, perms) =

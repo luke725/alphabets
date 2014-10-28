@@ -13,6 +13,8 @@ module SAC3 where
 	import RelationalStructure
 	import AC2001
 	import Utils
+	import Constraint (CSPData)
+	import qualified Constraint
 	
 	-- finds solution with some generic optimizations
 	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
@@ -21,13 +23,13 @@ module SAC3 where
 		-> Maybe (Map v d)
 		
 	findSolutionFast vstr dstr =
-		case findSolution vstrInt' dstrInt' of
+		case findSolution vstrInt dstrInt of
 			Just m -> Just $ Map.fromList $ map (\(vi, di) -> (vstrMap!vi, dstrMap!di)) $ Map.toList m
 			Nothing -> Nothing
 		where
-			vstrInt' = renameRelations (\rname -> sigMapInt!rname) vstrInt
-			dstrInt' = renameRelations (\rname -> sigMapInt!rname) dstrInt
-			sigMapInt = sigMapToInt (structureSig vstrInt)
+--			vstrInt' = renameRelations (\rname -> sigMapInt!rname) vstrInt
+--			dstrInt' = renameRelations (\rname -> sigMapInt!rname) dstrInt
+--			sigMapInt = sigMapToInt (structureSig vstrInt)
 			(vstrInt, vstrMap, _) = intStructure vstr
 			(dstrInt, dstrMap, _) = intStructure dstr
 			
@@ -43,7 +45,7 @@ module SAC3 where
 				concatMap (\(vs, ds) -> map (\v -> (v, ds)) (Set.toList vs))
 				$ map (\(Relation (_, _, vts), Relation (_, _, dts)) -> (Set.map (\(Tuple[v]) -> v) vts, Set.map (\(Tuple[d]) -> d) dts)) 
 				$ map (\rname -> (getRelation vstr rname, getRelation dstr rname)) $ Map.keys $ Map.filter (\(Arity r) -> (r == 1)) sigMap
-	
+				
 
 	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
 		=> Structure rname v 
@@ -51,7 +53,7 @@ module SAC3 where
 		-> Maybe (Map v d)
 		
 	findSolution vstr dstr =
-		case runSAC' vstr dstr cspDataVD (applyUnaryConstraint vstr dstr) of
+		case runSAC' cspData (applyUnaryConstraint vstr dstr) of
 			Left m -> Just m
 			Right sol -> 
 				if PS.notEmpty sol
@@ -68,14 +70,14 @@ module SAC3 where
 			
 			setValue' _ _ [] = Left Nothing
 			setValue' sol v (d:ds) =
-				case runSAC' vstr' dstr' cspDataVD (PS.setDomain v (Set.singleton d) sol) of
+				case runSAC' cspData (PS.setDomain v (Set.singleton d) sol) of
 					Left m -> Left (Just m)
 					Right sol' ->
 						if PS.notEmpty sol'
 						then Right sol'
 						else setValue' sol v ds
 						
-			cspDataVD = cspData vstr' dstr'
+			cspData = Constraint.createCspData vstr' dstr'
 			
 			vstr' = removeUnaryRelations vstr
 			dstr' = removeUnaryRelations dstr
@@ -87,19 +89,17 @@ module SAC3 where
 		-> PossibleSolutions v d 
 		-> Either (Map v d) (PossibleSolutions v d)
 		
-	runSAC vstr dstr sol = runSAC' vstr dstr (cspData vstr dstr) sol
+	runSAC vstr dstr sol = runSAC' (Constraint.createCspData vstr dstr) sol
 				
 
 	runSAC'
-		:: forall v d rname. (Ord v, Ord d, Ord rname) 
-		=> Structure rname v 
-		-> Structure rname d
-		-> CSPData v d
+		:: forall v d. (Ord v, Ord d) 
+		=> CSPData v d
 		-> PossibleSolutions v d 
 		-> Either (Map v d) (PossibleSolutions v d)
 		
-	runSAC' vstr dstr cspDataVD sol = do
-		(_, sol') <- fixPointM sacStep (emptyLast, runAC vstr dstr sol)
+	runSAC' cspData sol = do
+		(_, sol') <- fixPointM sacStep (emptyLast, runAC' cspData sol)
 		return sol'
 		where
 			sacStep :: (Last v d, PossibleSolutions v d) -> Either (Map v d) (Last v d, PossibleSolutions v d)
@@ -123,7 +123,7 @@ module SAC3 where
 								Just (v, d) -> do
 									dv <- getDomain v
 									setDomain v (Set.delete d dv)
-									ac cspDataVD
+									ac cspData
 									return Nothing
 								Nothing -> buildBranch m'
 	
@@ -134,7 +134,7 @@ module SAC3 where
 				-> ACState v d (Either (Map v d) (Maybe (v, d), Map v (Set d)))
 				
 			buildBranch' m [] br =
-				if Map.size br == Set.size (structureElems vstr) 
+				if Map.size br == Set.size (PS.variables sol) 
 				then return (Left br) 
 				else return (Right (Nothing, m))
 				
@@ -155,7 +155,7 @@ module SAC3 where
 							then buildBranch' m' (v:free) br 
 							else do
 								setDomain v (Set.singleton d)
-								ac cspDataVD
+								ac cspData
 								(_, dom') <- get
 								if PS.notEmpty dom'
 								then

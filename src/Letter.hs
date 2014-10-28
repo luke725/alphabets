@@ -6,11 +6,8 @@ module Letter where
 	import Data.Map ((!))
 	import qualified Data.Map as Map
 	import qualified Data.List as List
---	import qualified Data.Maybe as Maybe
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PermutationGroup
-	
---	import Utils
 	
 	newtype Atom = Atom Int deriving (Ord, Eq)
 	
@@ -19,13 +16,11 @@ module Letter where
 		
 	type Partition = [[Atom]]
 	
-	type Automorphisms = ([Atom], [Permutation Atom])
+	type AutomorphismGroup = ([Atom], [Permutation Atom])
 
-	type Alphabet = [Automorphisms]
+	type Alphabet = [AutomorphismGroup]
 	
 	data Letter = LSet (Set Letter) | LAtom Atom deriving (Show, Ord, Eq)
-	
-	newtype Element = Element (Int, Permutation Int) deriving (Show, Ord, Eq)
 	
 	setL :: [Letter] -> Letter
 	setL letters = LSet (Set.fromList letters)
@@ -44,7 +39,7 @@ module Letter where
 			applyAutomorphism f' (LAtom a) = LAtom (a .^ f')
 			applyAutomorphism f' (LSet set) = LSet (Set.map (applyAutomorphism f') set)
 	
-	letterAutomorphisms :: Letter -> Automorphisms
+	letterAutomorphisms :: Letter -> AutomorphismGroup
 	letterAutomorphisms letter =
 		(atoms, filter (isAutomorphism letter) allPermutations)
 		where
@@ -54,7 +49,7 @@ module Letter where
 					(\perm -> PermutationGroup.fromPairs (zip atoms perm)) 
 					(List.permutations atoms)
 					
-	letterAutomorphismGroup :: Letter -> Automorphisms
+	letterAutomorphismGroup :: Letter -> AutomorphismGroup
 	letterAutomorphismGroup letter =
 		(atoms, filter (isAutomorphism letter) allPermutations)
 		where

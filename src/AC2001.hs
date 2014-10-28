@@ -12,20 +12,26 @@ module AC2001 where
 	import qualified PossibleSolutions as PS
 	import Utils
 	import RelationalStructure
+	import qualified Constraint
+	import Constraint (Constraint (Constraint), CSPData)
 
-	newtype Constraint v d = Constraint (Tuple v, Set (Tuple d)) deriving (Show, Eq, Ord)
 	newtype Last v d = Last (Map ((v, d), Constraint v d) (Tuple d)) deriving (Show, Eq, Ord)
 	type ACState v d = State (Last v d, PossibleSolutions v d)
 	
-	type CSPData v d = (Set (v, Constraint v d), Map v [(v, Constraint v d)])
-	
-	runAC :: forall v d rname. (Ord v, Ord d, Ord rname) 
+	runAC :: (Ord v, Ord d, Ord rname) 
 		=> Structure rname v 
 		-> Structure rname d
 		-> PossibleSolutions v d 
 		-> PossibleSolutions v d
 		
-	runAC vstr dstr sol = snd $ execState (ac $ cspData vstr dstr) (emptyLast, sol)
+	runAC vstr dstr sol = runAC' (Constraint.createCspData vstr dstr) sol
+	
+	runAC' :: (Ord v, Ord d)
+	    => CSPData v d
+	    -> PossibleSolutions v d
+	    -> PossibleSolutions v d
+	    
+	runAC' cspDataVD sol = snd $ execState (ac cspDataVD) (emptyLast, sol)
 	
 	ac :: forall v d. (Ord v, Ord d) 
 		=> CSPData v d
@@ -47,19 +53,8 @@ module AC2001 where
 			addNeighbors :: (v, Constraint v d) -> Set (v, Constraint v d) -> Set (v, Constraint v d)
 			addNeighbors (v, c) q =
 				foldl (\q' e -> Set.insert e q') q 
-				$ filter (\(v', c') -> v /= v' && c /= c' && elem v' (constraintVars c'))
+				$ filter (\(v', c') -> v /= v' && c /= c' && elem v' (Constraint.vars c'))
 				$ (mapCs!v)
-			
-	cspData :: (Ord v, Ord d, Ord rname) => Structure rname v -> Structure rname d -> CSPData v d
-	cspData vstr dstr = 
-		(Set.fromList allCs, mapCs)
-		where
-			conPairs c = map (\v -> (v, c)) (constraintVars c)
-			allCs = concatMap conPairs $ allConstraints vstr dstr
-			mapCs = 
-				foldl (\m (v, vc) -> Map.insertWith (++) v [vc] m) Map.empty 
-				$ concatMap (\(v, c) -> map (\v' -> (v, (v',c))) (constraintVars c)) 
-				$ allCs
 			
 	revise :: forall v d. (Ord v, Ord d) => (v, Constraint v d) -> ACState v d Bool
 	revise (v, c) = do
@@ -79,7 +74,7 @@ module AC2001 where
 					dom <- getDomain v
 					setDomain v (Set.singleton d)
 					doms <- getDomains c
-					case nextOkTuple (meetsConstraint c) doms mt of
+					case nextOkTuple (Constraint.meetsConstraint c) doms mt of
 						Just t' -> do
 							setLast ((v,d), c) t'
 							setDomain v dom
@@ -114,23 +109,6 @@ module AC2001 where
 	setDomain v ds = do
 		(last, sol) <- get
 		put (last, PS.setDomain v ds sol)
-		
-	allConstraints :: (Ord rname, Ord v, Ord d) => Structure rname v -> Structure rname d -> [Constraint v d]
-	allConstraints vstr dstr =
-		removeDupConstraints
-		$ concatMap 
-			(\rname -> 
-				map 
-					(\t -> Constraint (t, relationTuples dstr rname)) 
-					(Set.toList $ relationTuples vstr rname)) 
-		$ relationNames 
-		$ structureSig vstr
-	
-	meetsConstraint :: (Ord d) => Constraint v d -> Tuple d -> Bool
-	meetsConstraint (Constraint (_,ds)) t = Set.member t ds
-	
-	constraintVars :: Constraint v d -> [v]
-	constraintVars (Constraint (Tuple vs, _)) = vs
 	
 	emptyLast :: Last v d
 	emptyLast = Last Map.empty
@@ -145,10 +123,5 @@ module AC2001 where
 				if c t 
 				then Just t 
 				else nextOkTuple c s (Just t)
-				
-	removeDupConstraints :: (Ord v, Ord d) => [Constraint v d] -> [Constraint v d]
-	removeDupConstraints cs =
-		map Constraint
-		$ Map.toList
-		$ foldl (\m (Constraint (vt, dts)) -> Map.insertWith Set.intersection vt dts m) Map.empty cs
+
 	
