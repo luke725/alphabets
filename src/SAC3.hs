@@ -1,5 +1,6 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
+-- implements SAC3 and backtrack-free algorithm for finding a solution 
 module SAC3 where
 	import Data.Set(Set)
 	import qualified Data.Set as Set
@@ -22,6 +23,7 @@ module SAC3 where
 	data BuildBranchResult a b = Branch [(a, b)] | ZeroBranch (a, b) deriving (Eq, Ord, Show)
 	
 	-- finds solution with some generic optimizations
+	-- is correct if dstr has majority polymorphism
 	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
 		=> Structure rname v 
 		-> Structure rname d
@@ -48,7 +50,7 @@ module SAC3 where
 				$ map (\(Relation (_, _, vts), Relation (_, _, dts)) -> (Set.map (\(Tuple[v]) -> v) vts, Set.map (\(Tuple[d]) -> d) dts)) 
 				$ map (\rname -> (getRelation vstr rname, getRelation dstr rname)) $ Map.keys $ Map.filter (\(Arity r) -> (r == 1)) sigMap
 				
-
+	-- is correct if dstr has majority polymorphism
 	findSolution :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
 		=> Structure rname v 
 		-> Structure rname d

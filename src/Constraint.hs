@@ -1,3 +1,5 @@
+-- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
+
 module Constraint where
 	import Data.Set(Set)
 	import qualified Data.Set as Set
@@ -62,3 +64,4 @@ module Constraint where
 				if meetsConstraint c t 
 				then Just t 
 				else nextTupleMeetingConstraint c s (Just t)
+

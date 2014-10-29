@@ -1,5 +1,6 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
+-- simple functions for computing Arc Consistency and Singleton Arc Consistency
 module ArcConsistency where
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))

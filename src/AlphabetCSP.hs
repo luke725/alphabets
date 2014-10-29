@@ -1,7 +1,6 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
 module AlphabetCSP where
---	import Debug.Trace
 	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import qualified Data.List as List
@@ -10,10 +9,6 @@ module AlphabetCSP where
 	import qualified Data.Maybe as Maybe
 	import Math.Algebra.Group.PermutationGroup(Permutation, (.^))
 	import qualified Math.Algebra.Group.PermutationGroup as PG
---	import qualified Math.Algebra.Group.SchreierSims as SS
-	
---	import System.IO.Unsafe
---	import Data.Time
 
 	import RelationalStructure
 	import Letter
@@ -56,7 +51,7 @@ module AlphabetCSP where
 				$ Map.toList (relationsFromAutomorphisms (atoms, perm))
 				
 
-				
+	-- template of an alphabet
 	structureT :: Alphabet -> Structure RName Element
 	structureT alphabet = 
 		filterStructure (okType alphabet) $ addTypeRels (structureFromRels (relationsFromAlphabet alphabet))
@@ -71,6 +66,7 @@ module AlphabetCSP where
 					Map.empty 
 					(Set.toList $ structureElems str)
 	
+	-- structure T_U as in the thesis
 	structureTu :: Alphabet -> Structure RName Element
 	structureTu alphabet = 
 		addRelations 
@@ -78,7 +74,8 @@ module AlphabetCSP where
 			t
 		where
 			t = structureT alphabet
-			
+		
+	-- structure T^3_U as in the thesis	
 	structureT3u :: Alphabet -> Structure RName (Tuple Element)
 	structureT3u alphabet =
 		addRelations (map u elems) t3
@@ -91,7 +88,8 @@ module AlphabetCSP where
 					(Unary e, 
 					 Arity 1, 
 					 Set.fromList $ concatMap (\a -> map (\x -> Tuple [x]) [Tuple [a, e, e], Tuple [e, a, e], Tuple [e, e, a]]) elems)
-		
+	
+	-- structure M as in the thesis
 	structureM :: Alphabet -> Structure RName (Tuple Element)
 	structureM alphabet =
 		filterStructure (\e -> elemType e /= ErrorType) (structureT3u alphabet)
@@ -101,31 +99,56 @@ module AlphabetCSP where
 		case elemType e of
 			CorrectType t -> (t < dimension alphabet - 1)
 			ErrorType     -> False	
-			 
+	
+	-- structure V as in the thesis
 	structureV :: Alphabet -> Structure RName Element
 	structureV alphabet =
 		filterStructure (okType alphabet) (structureTu alphabet)
 		
+	-- structure M' as in the thesis
 	structureM' :: Alphabet -> Structure RName (Tuple Element)
 	structureM' alphabet =
 		filterStructure (okType alphabet) (structureM alphabet)
 		
+	-- structure M'' as in the thesis
 	structureM'' :: Alphabet -> Structure RName (Tuple Element)
 	structureM'' alphabet =
 		filterStructure (\(Tuple [x,_,_]) -> isNeutral x) (structureM' alphabet)
 		
+	-- structure D as in the thesis
 	structureD :: Alphabet -> Structure RName (Tuple Element)
 	structureD alphabet =
 		mapStructure (\(Tuple [_,y,z]) -> (Tuple [y, z])) (structureM'' alphabet)
 		
+	-- structure D_O as in the thesis
 	structureDo :: Alphabet -> Structure RName (Tuple Element)
 	structureDo alphabet =
 		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureD alphabet)
 		
-	structureDDirect :: Alphabet -> Structure RName (Tuple Element)
-	structureDDirect alphabet =
-			addRelations (map u elems) t2
+--	structureDDirect :: Alphabet -> Structure RName (Tuple Element)
+--	structureDDirect alphabet =
+--			addRelations (map u elems) t2
+--		where
+--			t = filterStructure (okType alphabet) $ structureT alphabet
+--			elems = Set.toList $ structureElems t
+--			t2 = filterStructure (okType alphabet) $ structPower t 2
+--			u e =
+--				if isNeutral e
+--				then
+--					Relation 
+--						(Unary e, 
+--						 Arity 1, 
+--						 Set.fromList 
+--						 	(concatMap (\a -> [Tuple[Tuple [a, e]], Tuple[Tuple [e, a]]]) elems))
+--				else
+--					Relation (Unary e, Arity 1, Set.fromList [Tuple[Tuple [e, e]]])
+					
+	-- structure D_O as in the thesis but constructed in a faster way
+	structureDoFast :: Alphabet -> Structure RName (Tuple Element)
+	structureDoFast alphabet =
+		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) d
 		where
+			d = addRelations (map u elems) t2
 			t = filterStructure (okType alphabet) $ structureT alphabet
 			elems = Set.toList $ structureElems t
 			t2 = filterStructure (okType alphabet) $ structPower t 2
@@ -138,11 +161,7 @@ module AlphabetCSP where
 						 Set.fromList 
 						 	(concatMap (\a -> [Tuple[Tuple [a, e]], Tuple[Tuple [e, a]]]) elems))
 				else
-					Relation (Unary e, Arity 1, Set.fromList [Tuple[Tuple [e, e]]])
-					
-	structureDoDirect :: Alphabet -> Structure RName (Tuple Element)
-	structureDoDirect alphabet =
-		filterStructure (\(Tuple [x,_]) -> isConjClassRep x) (structureDDirect alphabet)		
+					Relation (Unary e, Arity 1, Set.fromList [Tuple[Tuple [e, e]]])				
 	
 	checkMajorityAutomorphisms :: Alphabet -> Bool
 	checkMajorityAutomorphisms alphabet =
@@ -150,22 +169,24 @@ module AlphabetCSP where
 		then findSolutionFast strDo strV /= Nothing
 		else error "Signature mismatch"
 		where
-			strDo = structureDoDirect alphabet
+			strDo = structureDoFast alphabet
 			strV = structureV alphabet
 
+	-- use original, slow algorithms
 	checkMajorityAutomorphismsSlow :: Alphabet -> Bool
 	checkMajorityAutomorphismsSlow alphabet =
 		if structureSig strDo == structureSig strV
 		then ArcConsistency.findSACSolution strDo strV /= Nothing
 		else error "Signature mismatch"
 		where
-			strDo = structureDoDirect alphabet
+			strDo = structureDo alphabet
 			strV = structureV alphabet			
-	
 			
 	checkMajorityLetter :: Letter -> Bool
 	checkMajorityLetter letter =	
 		checkMajorityAutomorphisms [letterAutomorphisms letter]
+		
+	-- auxiliary functions
 	
 	isConjClassRep :: Element -> Bool
 	isConjClassRep (Element (i, p)) =

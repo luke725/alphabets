@@ -1,5 +1,6 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
+-- module that contains a generic definition of a relational structure
 module RelationalStructure where
 	import Data.Set (Set)
 	import qualified Data.Set as Set
@@ -121,9 +122,6 @@ module RelationalStructure where
 		
 	addRelations rels str =
 		foldl (\str' rel -> addRelation rel str') str rels
-		
---	expandSignature :: (Ord rname, Ord element) => Signature rname -> Structure rname element -> Structure rname element
---	expandSignature (Signature sigMap) str =
 		
 		
 	removeUnaryRelations :: (Ord rname, Ord element) => Structure rname element -> Structure rname element
