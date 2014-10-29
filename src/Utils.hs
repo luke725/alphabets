@@ -154,3 +154,4 @@ module Utils where
 
 	nextTuple [] (Tuple (_:_)) = error ("Unexpected pattern in nextTuple")
 	nextTuple (_:_) (Tuple []) = error ("Unexpected pattern in nextTuple")
+	

@@ -76,7 +76,7 @@ module AC2001 where
 					dom <- getDomain v
 					setDomain v (Set.singleton d)
 					doms <- getDomains c
-					case nextOkTuple (Constraint.meetsConstraint c) doms mt of
+					case Constraint.nextTupleMeetingConstraint c doms mt of
 						Just t' -> do
 							setLast ((v,d), c) t'
 							setDomain v dom
@@ -90,7 +90,10 @@ module AC2001 where
 				return $ all (\(v', d') -> Set.member v' d') (zip ts doms)
 				
 			getDomains (Constraint (Tuple ts, _)) = do
-				mapM getDomain ts	
+				mapM getDomain ts
+				
+	
+	-- auxiliary functions that operate on state
 	
 	getLast :: (Ord v, Ord d) => ((v, d), Constraint v d) -> ACState v d (Maybe (Tuple d))
 	getLast k = do
@@ -114,16 +117,5 @@ module AC2001 where
 	
 	emptyLast :: Last v d
 	emptyLast = Last Map.empty
-	
-	nextOkTuple :: (Ord v) => (Tuple v -> Bool) -> [Set v] -> Maybe (Tuple v) -> Maybe (Tuple v)
-	nextOkTuple c s mt =
-		case mt of
-			Just t -> nextTuple s t >>= okTuple
-			Nothing -> firstTuple s >>= okTuple
-		where
-			okTuple t =
-				if c t 
-				then Just t 
-				else nextOkTuple c s (Just t)
 
 	

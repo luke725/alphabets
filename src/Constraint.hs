@@ -51,3 +51,14 @@ module Constraint where
 		map Constraint
 		$ Map.toList
 		$ foldl (\m (Constraint (vt, dts)) -> Map.insertWith Set.intersection vt dts m) Map.empty cs
+		
+	nextTupleMeetingConstraint :: (Ord v) => Constraint v' v -> [Set v] -> Maybe (Tuple v) -> Maybe (Tuple v)
+	nextTupleMeetingConstraint c s mt =
+		case mt of
+			Just t -> nextTuple s t >>= okTuple
+			Nothing -> firstTuple s >>= okTuple
+		where
+			okTuple t =
+				if meetsConstraint c t 
+				then Just t 
+				else nextTupleMeetingConstraint c s (Just t)

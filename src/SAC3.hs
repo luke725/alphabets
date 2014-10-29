@@ -19,34 +19,7 @@ module SAC3 where
 	
 	type PairSet a b = Map a (Set b)
 	
-	pairSetFromMap :: Map a (Set b) -> PairSet a b
-	pairSetFromMap m = Map.filter (\s -> Set.size s > 0) m
-	
-	removePair :: (Ord a, Ord b) => (a, b) -> PairSet a b -> PairSet a b
-	removePair (a, b) ps =
-		if Set.null bs
-		then Map.delete a ps
-		else Map.insert a bs ps
-		where
-			bs = Set.delete b (ps!a)
-			
-	removePairs :: (Ord a, Ord b) => [(a, b)] -> PairSet a b -> PairSet a b
-	removePairs l ps = foldl (\ps' (a, b) -> removePair (a, b) ps') ps l
-	
-	getAny :: (Ord a, Ord b) => PairSet a b -> a -> Maybe b
-	getAny ps a =
-		case Map.lookup a ps of
-			Just bs -> Just (Set.findMin bs)
-			Nothing -> Nothing
-			
-	pairSetSize :: PairSet a b -> Int
-	pairSetSize ps = Map.size $ Map.filter (\s -> Set.size s > 0) ps
-	
-	pairSetKeys :: PairSet a b -> [a]
-	pairSetKeys = Map.keys
-	
 	data BuildBranchResult a b = Branch [(a, b)] | ZeroBranch (a, b) deriving (Eq, Ord, Show)
-	
 	
 	-- finds solution with some generic optimizations
 	findSolutionFast :: forall v d rname. (Ord v, Ord d, Ord rname, Show v, Show d) 
@@ -139,23 +112,23 @@ module SAC3 where
 			
 			-- returns Just m if accidentaly found a full solution
 			buildBranches :: PairSet v d -> ACState v d (Maybe (Map v d))
-			buildBranches ps =
-				if pairSetSize ps == 0
+			buildBranches m =
+				if pairSetSize m == 0
 				then return Nothing
 				else do
 					(last, dom) <- get
-					bb <- buildBranch ps (pairSetKeys ps) []
+					bb <- buildBranch m (pairSetKeys m) []
 					put (last, dom)
 					case bb of
 						Branch l ->
 							if List.length l == Set.size (PS.variables dom)
 							then return $ Just (Map.fromList l)
-							else buildBranches (removePairs l ps)
+							else buildBranches (removePairs l m)
 						ZeroBranch (v, d) -> do
 							dv <- getDomain v
 							setDomain v (Set.delete d dv)
 							ac cspData
-							buildBranches (removePair (v, d) ps)
+							buildBranches (removePair (v, d) m)
 	
 			buildBranch
 				:: PairSet v d 
@@ -165,11 +138,11 @@ module SAC3 where
 				
 			buildBranch _ [] br = return (Branch br)
 				
-			buildBranch ps (v:free) br =
-				case getAny ps v of
-					Nothing -> buildBranch ps free br
+			buildBranch m (v:free) br =
+				case getAny m v of
+					Nothing -> buildBranch m free br
 					Just d -> do
-							let ps' = removePair (v, d) ps
+							let ps' = removePair (v, d) m
 							setDomain v (Set.singleton d)
 							ac cspData
 							(_, dom') <- get
@@ -180,4 +153,33 @@ module SAC3 where
 								case br of
 									[]    -> return (ZeroBranch (v, d))
 									(_:_) -> return (Branch br)
+
+
+	--auxiliary functions that operate on PairSet					
+									
+	pairSetFromMap :: Map a (Set b) -> PairSet a b
+	pairSetFromMap m = Map.filter (\s -> Set.size s > 0) m
+	
+	removePair :: (Ord a, Ord b) => (a, b) -> PairSet a b -> PairSet a b
+	removePair (a, b) ps =
+		if Set.null bs
+		then Map.delete a ps
+		else Map.insert a bs ps
+		where
+			bs = Set.delete b (ps!a)
+			
+	removePairs :: (Ord a, Ord b) => [(a, b)] -> PairSet a b -> PairSet a b
+	removePairs l ps = foldl (\ps' (a, b) -> removePair (a, b) ps') ps l
+	
+	getAny :: (Ord a, Ord b) => PairSet a b -> a -> Maybe b
+	getAny ps a =
+		case Map.lookup a ps of
+			Just bs -> Just (Set.findMin bs)
+			Nothing -> Nothing
+			
+	pairSetSize :: PairSet a b -> Int
+	pairSetSize ps = Map.size $ Map.filter (\s -> Set.size s > 0) ps
+	
+	pairSetKeys :: PairSet a b -> [a]
+	pairSetKeys = Map.keys
 
