@@ -15,13 +15,13 @@ import qualified Math.Algebra.Group.SchreierSims as SS
 import qualified Math.Algebra.Group.PermutationGroup as PG
 
 import Utils
-import Data
+--import Data
 import Letter
 import AlphabetCSP
 
 		
-runAll :: [Atom] -> [GroupGens] -> [(GroupGens, Bool)]
-runAll _atoms sl =
+runAll :: [GroupGens] -> [(GroupGens, Bool)]
+runAll sl =
 	runEval (myParMap (\cl -> showRes (cl, checkMajorityAutomorphisms [ggAuto cl])) sl)
 	
 --run1 :: GroupGens -> (GroupGens, Bool)
@@ -33,10 +33,28 @@ myParMap f (a:as) = do
    b <- rpar (f a)
    bs <- myParMap f as
    return (b:bs)
+   
+getGroupGens :: [[[Int]]] -> GroupGens
+getGroupGens = map (map (map Atom))
 	
-run :: Int -> IO ()
-run n = do
-	putStrLn $ show $ runAll (map Atom [1..n]) (s !! (n-1))
+classifyAll :: IO ()
+classifyAll = do
+	l <- getContents
+	let rs :: [[[[Atom]]]] = map getGroupGens $ read l
+	putStrLn $ show $ runAll rs
+	
+classifyOne :: IO ()
+classifyOne = do
+	l <- getLine
+	let r :: [[[Atom]]] = getGroupGens $ read l
+	putStrLn $ show $ checkMajorityAutomorphisms [ggAuto r]
+	
+sumOfStandard :: IO ()
+sumOfStandard = do
+	l <- getContents
+	let rs :: [([[[Atom]]], Bool)] = map (\(x, b) -> (getGroupGens x, b)) $ read l
+	let standard = map (\(as, _) -> as) $ filter (\(_, b) -> b) rs
+	putStrLn $ show $ checkMajorityAutomorphisms (map ggAuto standard)
 	
 ggAuto :: GroupGens -> AutomorphismGroup
 ggAuto gg = (List.nub (concat $ concat gg), SS.elts (map (PG.fromCycles) gg))
@@ -86,22 +104,27 @@ options =
 main :: IO ()
 main = do
 	args <- getArgs
-	case getOpt Permute options args of
+	case args of
+		["all"] -> classifyAll
+		["one"] -> classifyOne
+		["sum"] -> sumOfStandard
+		_ -> dump info >> exitWith (ExitFailure 1)
+--	case getOpt Permute options args of
 --		([Path path], comm, []) ->
 --			case comm of
 --				["runPart"] -> runPart path
 --				["all", ks] -> allTogether path (read ks)
 --				_ -> dump info >> exitWith (ExitFailure 1)
-		([], comm, []) ->
-			case comm of
-				["run", ns] -> run (read ns)
+--		([], comm, []) ->
+--			case comm of
+--				["run", ns] -> run (read ns)
 --				["run1"] -> putStrLn $ show $ run1 $ getGroupGens [[[3,4]],[[5,6]],[[3,5],[4,6]],[[1,2]]]
 --				["all5"] -> all5
-				_ -> dump info >> exitWith (ExitFailure 1)
-		(_, _, errs) ->
-			dump (concat errs ++ info) >> exitWith (ExitFailure 1)
+--				_ -> dump info >> exitWith (ExitFailure 1)
+--		(_, _, errs) ->
+--			dump (concat errs ++ info) >> exitWith (ExitFailure 1)
 	where
 		dump = hPutStrLn stderr
 		info = usageInfo header options
-		header = "Usage: alphabets command [-p path]"
+		header = "Usage: alphabets [command] \n commands: \n "
 
