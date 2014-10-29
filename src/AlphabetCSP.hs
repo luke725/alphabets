@@ -39,8 +39,6 @@ module AlphabetCSP where
 			if elemType x == elemType (Tuple (h:t))
 			then elemType x
 			else ErrorType
-	
-	type GroupGens = [[[Atom]]]
 
 	neutralElement :: Element -> Element
 	neutralElement (Element (r, _)) = Element (r, PG.p [])
