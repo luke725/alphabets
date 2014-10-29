@@ -51,4 +51,7 @@ module PossibleSolutions where
 	-- returns any solutions; assumes that a set of solutions is nonempty
 	anySolution :: PossibleSolutions a b -> Map a b
 	anySolution (PossibleSolutions m) = Map.map Set.findMin m
+	
+	mapValues :: (a -> Set b -> Set b) -> PossibleSolutions a b -> PossibleSolutions a b
+	mapValues f (PossibleSolutions m) = PossibleSolutions (Map.mapWithKey f m)
 

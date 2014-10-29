@@ -1,26 +1,27 @@
 -- author : Lukasz Wolochowski (l.wolochowski@students.mimuw.edu.pl)
 
 module ArcConsistency where
-	import Data.Set (Set)
 	import qualified Data.Set as Set
 	import Data.Map (Map, (!))
 	import qualified Data.Map as Map
 	import qualified Data.List as List
 	import RelationalStructure
-	import Debug.Trace
 	import PossibleSolutions (PossibleSolutions)
 	import qualified PossibleSolutions as PS
 	import Utils
-
-	fullPossibleSolutions 
-		:: Ord a 
-		=> Structure rname a 
-		-> Structure rname b 
-		-> PossibleSolutions a b
-
-
-	fullPossibleSolutions str1 str2 =
-		PS.full (strElements str1) (strElements str2)	
+	
+	applyUnaryConstraint :: (Ord v, Ord d, Ord rname) => Structure rname v -> Structure rname d -> PossibleSolutions v d
+	applyUnaryConstraint vstr dstr =
+		foldl 
+			(\sol (v, ds) ->  PS.setDomain v (Set.intersection ds (PS.domain sol v)) sol) 
+			(PS.full (structureElems vstr) (structureElems dstr)) 
+			constraints
+		where
+			(Signature sigMap) = structureSig vstr
+			constraints = 
+				concatMap (\(vs, ds) -> map (\v -> (v, ds)) (Set.toList vs))
+				$ map (\(Relation (_, _, vts), Relation (_, _, dts)) -> (Set.map (\(Tuple[v]) -> v) vts, Set.map (\(Tuple[d]) -> d) dts)) 
+				$ map (\rname -> (getRelation vstr rname, getRelation dstr rname)) $ Map.keys $ Map.filter (\(Arity r) -> (r == 1)) sigMap
 		
 	checkArcConsistency 
 		:: (Ord rname, Ord a, Ord b, Show rname, Show a, Show b) 
@@ -29,7 +30,7 @@ module ArcConsistency where
 		-> Bool
 		
 	checkArcConsistency s1 s2 =
-		PS.notEmpty (runArcConsistency s1 s2 (fullPossibleSolutions s1 s2))
+		PS.notEmpty (runArcConsistency s1 s2 (PS.full (structureElems s1) (structureElems s2)))
 		
 		
 	runArcConsistency
@@ -59,10 +60,10 @@ module ArcConsistency where
 			(\sol' (tuple1, rel2) -> stepTuple tuple1 rel2 sol')
 			sol
 			(concatMap 
-				(\rname -> (map (\t -> (t, rels2!rname)) (relationTuples rels1 rname))) 
+				(\rname -> (map (\t -> (t, rels2!rname)) (relationTuples' rels1 rname))) 
 				(relationNames sig))
 		where	
-			relationTuples rels name = Set.toList tuples 
+			relationTuples' rels name = Set.toList tuples 
 				where 
 					Relation (_, _, tuples) = rels ! name
 			
@@ -72,24 +73,26 @@ module ArcConsistency where
 				-> PossibleSolutions a b 
 				-> PossibleSolutions a b
 
-			stepTuple t1 rel2 sol =
-				foldl (\sol (a, sb) -> PS.setDomain a sb sol) sol (Map.toList newPosSol)
+			stepTuple t1 rel2 sol' =
+				foldl (\sol'' (a, sb) -> PS.setDomain a sb sol'') sol' (Map.toList newPosSol)
 				where
 					Relation (_, _, tuples2) = rel2
+					
+					(Tuple t1l) = t1
 		
 					zipTuples :: [Tuple (a, b)]
-					zipTuples = map (\(Tuple t2) -> Tuple $ zip t1 t2) (Set.toList tuples2)
+					zipTuples = map (\(Tuple t2) -> Tuple $ zip t1l t2) (Set.toList tuples2)
 			
 					possiblePartSol :: [Tuple (a, b)]
 					possiblePartSol = 
 						filter
-							(\(Tuple t) -> all (\(a, b) -> Set.member b (PS.domain sol a)) t) 
+							(\(Tuple t) -> all (\(a, b) -> Set.member b (PS.domain sol' a)) t) 
 							zipTuples
 			
 					newPosSol =
 						foldl 
 							(\m (a, b) -> Map.insertWith Set.union a (Set.singleton b) m)
-							(Map.fromList (map (\a -> (a, Set.empty)) t1))
+							(Map.fromList (map (\a -> (a, Set.empty)) t1l))
 							(concat $ map (\(Tuple t) -> t) possiblePartSol)
 
 	
@@ -100,7 +103,7 @@ module ArcConsistency where
 		-> Bool
 		
 	checkSAC s1 s2 =
-		PS.notEmpty (runSAC s1 s2 (fullPossibleSolutions s1 s2))
+		PS.notEmpty (runSAC s1 s2 (PS.full (structureElems s1) (structureElems s2)))
 		
 		
 	runSAC 
@@ -117,7 +120,7 @@ module ArcConsistency where
 		where
 			sol' = runArcConsistency s1 s2 sol
 			sol'' = 
-				PS.map 
+				PS.mapValues
 					(\a sa ->
 						if Set.size sa <= 1
 						then sa
@@ -141,27 +144,19 @@ module ArcConsistency where
 			case foldl 
 					(\msol a -> msol >>= (\sol -> setSolOnElem sol a)) 
 					(Just initSol) 
-					(Set.toList (strElements s1')) 
+					(Set.toList (structureElems s1')) 
 			of
 				Just sol -> Just (PS.anySolution sol)
 				Nothing  -> Nothing
 		else
 			Nothing
 		where
-			
-			Signature sigMap = signature s1
-			sigUnary = Signature $ Map.filter (\ar -> ar == Arity 1) sigMap
-			sig' = Signature $ Map.filter (\ar -> ar > Arity 1) sigMap
-			
-			s1' = filterRelations sig' s1
-			s2' = filterRelations sig' s2
+			s1' = removeUnaryRelations s1
+			s2' = removeUnaryRelations s2
 			
 			initSol = 
 				runSAC s1' s2' 
-					(runArcConsistency 
-						(filterRelations sigUnary s1) 
-						(filterRelations sigUnary s2)
-						(fullPossibleSolutions s1 s2))
+					(applyUnaryConstraint s1 s2)
 			
 			setSolOnElem :: PossibleSolutions a b -> a -> Maybe (PossibleSolutions a b)
 			setSolOnElem sol h =
@@ -184,7 +179,7 @@ module ArcConsistency where
 		where
 			s = renameRelations Left str
 			p = structPower s 3
-			elts = Set.toList (strElements s)
+			elts = Set.toList (structureElems s)
 			
 			s' :: Structure (Either rname a) a
 			s' = foldl (\s'' e -> addRelation (Relation (Right e, Arity 1, Set.singleton (Tuple [e]))) s'') s elts

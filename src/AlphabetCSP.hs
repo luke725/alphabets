@@ -19,6 +19,7 @@ module AlphabetCSP where
 	import Letter
 	import Utils
 	import SAC3
+	import qualified ArcConsistency
 
 	data RName = Original (AutomorphismGroup, Partition) | Unary Element | EType ElementType deriving (Show, Ord, Eq)
 	
@@ -151,6 +152,16 @@ module AlphabetCSP where
 		where
 			strDo = structureDoDirect alphabet
 			strV = structureV alphabet
+
+	checkMajorityAutomorphismsSlow :: Alphabet -> Bool
+	checkMajorityAutomorphismsSlow alphabet =
+		if structureSig strDo == structureSig strV
+		then ArcConsistency.findSACSolution strDo strV /= Nothing
+		else error "Signature mismatch"
+		where
+			strDo = structureDoDirect alphabet
+			strV = structureV alphabet			
+	
 			
 	checkMajorityLetter :: Letter -> Bool
 	checkMajorityLetter letter =	
