@@ -56,14 +56,16 @@ module AC2001 where
 				$ filter (\(v', c') -> v /= v' && c /= c' && elem v' (Constraint.vars c'))
 				$ (mapCs!v)
 			
+	-- returns True is an element was deleted from the domain
 	revise :: forall v d. (Ord v, Ord d) => (v, Constraint v d) -> ACState v d Bool
 	revise (v, c) = do
 		dom <- getDomain v
-		rs <- (mapM reviseD $ Set.toList dom)
-		return (or rs)
+		deletedL <- (mapM reviseSingle $ Set.toList dom)
+		let deleted = or deletedL
+		return deleted
 		where
-			reviseD :: d -> ACState v d Bool
-			reviseD d = do
+			reviseSingle :: d -> ACState v d Bool
+			reviseSingle d = do
 				mt <- getLast ((v,d), c)
 				ok <- case mt of
 					Just t -> testTuple t

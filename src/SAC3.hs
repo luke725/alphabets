@@ -24,13 +24,9 @@ module SAC3 where
 	
 	removePair :: (Ord a, Ord b) => (a, b) -> PairSet a b -> PairSet a b
 	removePair (a, b) ps =
-		if (Set.member b (ps!a))
-		then
-			if Set.null bs
-			then Map.delete a ps
-			else Map.insert a bs ps
-		else
-			error "error"
+		if Set.null bs
+		then Map.delete a ps
+		else Map.insert a bs ps
 		where
 			bs = Set.delete b (ps!a)
 			
@@ -63,9 +59,6 @@ module SAC3 where
 			Just m -> Just $ Map.fromList $ map (\(vi, di) -> (vstrMap!vi, dstrMap!di)) $ Map.toList m
 			Nothing -> Nothing
 		where
---			vstrInt' = renameRelations (\rname -> sigMapInt!rname) vstrInt
---			dstrInt' = renameRelations (\rname -> sigMapInt!rname) dstrInt
---			sigMapInt = sigMapToInt (structureSig vstrInt)
 			(vstrInt, vstrMap, _) = intStructure vstr
 			(dstrInt, dstrMap, _) = intStructure dstr
 			
@@ -143,7 +136,8 @@ module SAC3 where
 				case runState (buildBranches (pairSetFromMap $ PS.toMap dom)) (last, dom) of
 					(Nothing, (last', dom')) -> Right (last', dom')
 					(Just m, _)              -> Left m
-				
+			
+			-- returns Just m if accidentaly found a full solution
 			buildBranches :: PairSet v d -> ACState v d (Maybe (Map v d))
 			buildBranches ps =
 				if pairSetSize ps == 0
@@ -176,10 +170,6 @@ module SAC3 where
 					Nothing -> buildBranch ps free br
 					Just d -> do
 							let ps' = removePair (v, d) ps
---							dv <- getDomain v
---							if not (Set.member d dv) 
---							then buildBranch ps' (v:free) br 
---							else do
 							setDomain v (Set.singleton d)
 							ac cspData
 							(_, dom') <- get
